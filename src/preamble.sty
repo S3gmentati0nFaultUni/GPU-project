@@ -1,0 +1,227 @@
+\usepackage{a4wide}
+
+\usepackage[english]{babel}
+
+\usepackage{amsthm, amsmath, amssymb, amsfonts}
+\usepackage[makeroom]{cancel}
+\usepackage{centernot}
+
+\usepackage{graphicx}
+
+\usepackage{tikz}
+
+\usepackage{enumitem}
+
+\usepackage{mathtools}
+
+\usepackage{subcaption}
+
+\usepackage{fancyhdr}
+\usepackage{geometry}
+\geometry{a4paper, left=2cm, right=2cm, top=1.5cm, bottom=3cm }
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage[
+	backend=biber,
+	maxalphanames=10,
+]{biblatex}
+\bibliography{tech.bib}
+
+\usepackage{etoolbox,fancyhdr,xcolor}
+
+\usepackage{lmodern}
+
+\usepackage{hyperref}
+\hypersetup{
+	colorlinks=true,
+	linkcolor=blue,
+	filecolor=magenta,
+	urlcolor=cyan,
+	pdfpagemode=FullScreen,
+}
+\urlstyle{same}
+
+% Color definitions
+\definecolor{PrimaryColor}{HTML}{0649AD}
+
+% Project setup
+\newcommand{\headrulecolor}[1]{\patchcmd{\headrule}{\hrule}{\color{#1}\hrule}{}{}}
+\newcommand{\footrulecolor}[1]{\patchcmd{\footrule}{\hrule}{\color{#1}\hrule}{}{}}
+\renewcommand{\headrulewidth}{1pt}
+\headrulecolor{PrimaryColor}%
+\renewcommand{\footrulewidth}{1pt}
+\footrulecolor{PrimaryColor}%
+
+\fancyhf{}
+\fancyhead[R]{\includegraphics[width=0.11\textwidth]{fig/unimi.jpg}}
+
+\fancyfoot[L]{Relazione di Fisica degli acceleratori 1\\Dipartimento di Fisica "Aldo Pontremoli"}
+\fancyfoot[R]{\thepage}
+
+\setlength{\headheight}{15mm}
+\pagestyle{fancy}
+
+% Definition of a generic environment with custom numbering
+\newtheorem{innercustomgeneric}{\customgenericname}
+\providecommand{\customgenericname}{}
+\newcommand{\newcustomtheorem}[2]{
+	\newenvironment{#1}[1]
+	{
+		\renewcommand\customgenericname{#2 -}
+		\renewcommand\theinnercustomgeneric{##1}
+		\innercustomgeneric
+	}
+	{\endinnercustomgeneric}
+}
+
+% Definition of the various specific custom environments
+\newcustomtheorem{customtheorem}{Theorem}
+\newcustomtheorem{customlemma}{Lemma}
+\newcustomtheorem{customproposition}{Proposition}
+\newcustomtheorem{customcorollary}{Corollary}
+\newcustomtheorem{customclaim}{Claim}
+
+% Definition of the classic non-numbered environments
+\newtheorem*{definition}{Def}
+\newtheorem*{coolfact}{Cool Fact}
+\newtheorem*{property}{Property}
+
+\newtheorem{claim}{Claim}
+
+% Definition of a specific theorem style for the proof environment
+\newtheoremstyle{break}
+{\topsep}
+{\topsep}
+{\normalfont}
+{}
+{\bfseries}
+{.}
+{\newline}
+{}
+
+
+
+% Definition of the proof environment
+\theoremstyle{break}
+\newtheorem*{prf}{Proof}
+
+\newcommand{\@includebasepath}{src}
+\newcommand{\incl}[1]{\include{\@includebasepath/#1}}
+
+% Number sets
+\newcommand{\N}{\mathbb{N}}
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\Rx}[1]{\R^{#1}}
+
+% Complexity sets
+\renewcommand{\P}{\textbf{P }}
+\newcommand{\NP}{\textbf{NP }}
+
+% Dominion sets
+\newcommand{\frontier}[1]{\partial #1}
+\newcommand{\clojure}[1]{\overline{#1}}
+\newcommand{\internal}[1]{\dot{#1}}
+
+% Computational complexity approximators
+\renewcommand{\O}{\mathcal{O}}
+\newcommand{\Om}{\mathcal{\Omega}}
+\newcommand{\T}{\mathcal{\Theta}}
+
+% Sets associated to a graph G
+\renewcommand{\v}[1][G]{V\tnd{#1}}
+\newcommand{\e}[1][G]{E\tnd{#1}}
+\newcommand{\nv}[1][G]{n\tnd{#1}}
+\renewcommand{\ne}[1][G]{e\tnd{#1}}
+
+% Macro for problem title
+\newcommand{\prblm}[1]{\texttt{\MakeUppercase{#1}}}
+
+% New command for the Quod Erat Demostrandum square
+\renewcommand{\qed}{\hspace{10mm}$\square$}
+
+% Spaced out logic operators
+\newcommand{\fa}{\:\forall}
+\newcommand{\ex}{\:\exists}
+\newcommand{\st}{\::\:}
+\newcommand{\nimplies}{\centernot\implies}
+\newcommand{\nimpiledby}{\centernot\impliedby}
+
+% Set operators
+\newcommand{\ssdf}[2]{#1 \bigtriangleup #2}
+
+% Neighbor set
+\newcommand{\ngbrs}[2][G]{N_{#1}(#2)}
+
+% Degree macros
+% Associated to the graph itself
+\newcommand{\maxd}[1][G]{\Delta(#1)}
+\newcommand{\avgd}[1][G]{d_{avg}(#1)}
+\newcommand{\mind}[1][G]{\delta(#1)}
+% Associated to a specific vertex
+\renewcommand{\deg}[2][G]{d_{#1}(#2)}
+
+% Cliques and cycles
+\newcommand{\clq}[1]{\mathbb{K}_{#1}}
+\newcommand{\cycl}[1][C]{\mathcal{#1}}
+
+% Connected relationship, it indicates that there is a path between any two edges
+\newcommand{\conn}{\sim}
+
+% Edge density
+\newcommand{\ed}[1][G]{\varepsilon(#1)}
+
+% Ear decomposition
+\newcommand{\ears}[1][H]{#1_1 \subsetneq #1_2 \subsetneq \dots \subsetneq #1_n}
+
+% Generic parentheses redefinition
+\newcommand{\tnd}[1]{\left(#1\right)}
+\newcommand{\qdr}[1]{\left[#1\right]}
+\newcommand{\grf}[1]{\left\{#1\right\}}
+% Generic floor and ceiling redefinition
+\newcommand{\flr}[1]{\left\lfloor#1\right\rfloor}
+\newcommand{\cel}[1]{\left\lceil#1\right\rceil}
+
+% Independence number
+\newcommand{\ind}[1][G]{\alpha(#1)}
+
+% Symmetrized network
+\newcommand{\snet}[1][G]{\stackrel{\mathclap{\leftrightarrow}}{#1}}
+
+% Vector notation
+% Left arrow vector
+\newcommand{\cev}[1][e]{\reflectbox{\ensuremath{\vec{\reflectbox{\ensuremath{#1}}}}}}
+% Redefine the vector operator
+\newcommand{\ve}[1]{\mathbf{#1}}
+\newcommand{\norm}[1]{||#1||}
+
+% Chromatic measures definitions
+\newcommand{\cn}[1][G]{\mathcal{X}(#1)}
+\newcommand{\ci}[1][G]{\mathcal{X'}(#1)}
+
+% Formatting
+\newcommand{\bm}[1]{\mathbf{#1}}
+\renewcommand{\i}[1]{\textit{#1}}
+
+%%% Calculus macros
+\newcommand{\curl}[1]{\nabla \times \vec{#1}}
+\newcommand{\dngs}[1]{\nabla \cdot \vec{#1}}
+% Derivatives
+\newcommand{\pder}[2]{\frac{\partial{#1}}{\partial{#2}}}
+\newcommand{\der}[2]{\frac{d #1}{d #2}}
+%%%
+
+% Various other macros
+\newcommand{\smth}{\cdot}
+\newcommand{\minr}{\preceq}
+\newcommand{\nminr}{\npreceq}
+\newcommand{\das}{:=}
+
+\tikzset{
+	defv/.style={circle,minimum size=0.5cm,fill=cyan!20,draw=teal},
+	purv/.style={circle,minimum size=0.5cm,fill=violet!20,draw=purple},
+	redv/.style={circle,minimum size=0.5cm,fill=orange!20,draw=red},
+	defe/.style={-},
+	rede/.style={-,draw=red},
+	greene/.style={-,draw=greene},
+	dashed/.style={dash pattern={on 7pt off 5pt}}
+}
