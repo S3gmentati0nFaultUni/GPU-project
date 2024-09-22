@@ -1,15 +1,20 @@
 \documentclass[a4paper,10pt]{article}
 \usepackage{src/preamble}
+\usepackage[
+	backend=biber,
+	maxalphanames=10,
+]{biblatex}
+\bibliography{bibliography.bib}
 
 \begin{document}
 
 \noindent
 \begin{center}
-	\textbf{{\Large PAPER TITLE (IN CAPITALS)}} \\
+	\textbf{{PARALLEL SOLUTION FOR THE MST PROBLEM}} \\
 \end{center}
 
 \noindent
-\textbf{Author: Alessandro Biagiotti} \hfill \textit{Università degli studi di Milano, Milano, Italia}
+\textbf{Author: Alessandro Biagiotti} \hfill \textit{Milan university}
 \\
 
 %\noindent 
@@ -31,11 +36,24 @@
 \phantomsection
 \makeatletter\def\@currentlabel{\texttt{(I)}}\makeatother
 \label{sec:intro}
-\textbf{INTRODUZIONE:}
+\textbf{INTRODUCTION TO THE PROBLEM:}
 \\
 Lorem ipsum
 
-\bibliography{ResearchPaperBib}
+\noindent
+\phantomsection
+\makeatletter\def\@currentlabel{\texttt{(I)}}\makeatother
+\label{sec:intro}
+\textbf{IMPLEMENTAITON ROADMAP:}
+\\
+\begin{enumerate}
+	\item Started with a naive resolution of the problem using Prim's algorithm with no additional enrichment for the CPU code
+	\item Written a naive solver for the problem that leverages the GPU capacities
+	\item The solution originally written for the CPU could not keep up with the GPU solver I therefore implemented a small Heap class that was able to move the CPU solver to the next level
+	\item The GPU implementation found itself struggling essentially because of the nature of the problem and the not-so-efficient implementation
+\end{enumerate}
+
+\printbibliography
 
 \clearpage
 
