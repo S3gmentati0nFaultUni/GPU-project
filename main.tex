@@ -38,7 +38,26 @@
 \label{sec:intro}
 \textbf{INTRODUCTION TO THE PROBLEM:}
 \\
-Lorem ipsum
+The Minimum Spanning Tree Problem (\textsc{Mstp} for short) is a problem that has been studied for years and to this day finds many real world applications,to name a few:
+\begin{enumerate}
+	\item It's possible to find different \textsc{Mst}-based techniques that can be used to do image segmentation \cite{maze-generation} \cite{mst-segmentation-heuristic}.
+	\item Finding the \textsc{Mst} allows us to solve the Clustering problem, all we need to do is to compute an \textsc{Mst} and then drop the $k - 1$ most expensive edges of the \textsc{Mst} \cite{mst-applications}.
+	\item Finding the \textsc{Mst} is an important step of Christofides's algorithm, which is a 2-approximation for the widely known Travelling Salesman Problem (\textsc{Tsp} for short) \cite{tsp-christofides}.
+\end{enumerate}
+
+Many different solutions have been found for the problem in the years, the more basic implementations were Prim's \cite{prim-algorithm} and Kruskal's \cite{kruskal-algorithm}.
+
+Prim's algorithm is the simplest solver for \textsc{Mstp}, given a graph $G= (V, E)$, let us suppose that the size of the graph $|V|$ is $n$ and the number of edges $|E|$ is $m$, then, based on the implementation, the computational complexity ranges between the following values:
+\begin{itemize}
+	\item Naïve implementation: $\O(n^2)$
+	\item Binary heap and adjacency list: $\O(m\log{n})$
+	\item Fibonacci heap and adjacency list: $\O(m + n\log{n})$
+\end{itemize}
+In my implementation I have implemented both the Naïve version and the one using a binary heap, more on this in the next section.
+
+Kruskal's algorithm is the alternative to Prim's algorithm and it works in time $\O(m\log{m})$ if implemented using classical data structures.
+
+\bigskip
 
 \noindent
 \phantomsection
@@ -51,10 +70,13 @@ Lorem ipsum
 	\item Written a naive solver for the problem that leverages the GPU capacities
 	\item The solution originally written for the CPU could not keep up with the GPU solver I therefore implemented a small Heap class that was able to move the CPU solver to the next level
 	\item The GPU implementation found itself struggling essentially because of the nature of the problem and the not-so-efficient implementation
+	\item Changed the GPU implementation to use an hybrid of CPU code and GPU kernels, the CPU code is used in settings such as the scan, which is more efficient than using a naive GPU kernel, as well as the contraction operation
+	\item Reimplemented the contraction operation using a GPU kernel and I obtained a minor speedup. The GPU performance is still far inferior if compared with the efficient CPU version that I talked about earlier
+	\item Reimplemented the scan operation to work in a work efficient way, as a source I used the preprefix file.
 \end{enumerate}
 
-\printbibliography
-
 \clearpage
+
+\printbibliography
 
 \end{document}
