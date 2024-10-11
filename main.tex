@@ -130,6 +130,7 @@ In the following sections I will be going through the overall implementation roa
 	\item Changed the GPU implementation to use an hybrid of CPU code and GPU kernels, the CPU code is used in settings such as the scan, which is more efficient than using a naive GPU kernel, as well as the contraction operation
 	\item Reimplemented the contraction operation using a GPU kernel and I obtained a minor speedup. The GPU performance is still far inferior if compared with the efficient CPU version that I talked about earlier
 	\item Reimplemented the scan operation to work in a work efficient way, as a source I used the preprefix file and implemented the various sequential operations in a naïve way.
+	\item Reimplemented the fifth step of the algorithm, changed the logic from topological (one thread per vertex) to data centered (one thread per edge) each thread goes through a binary search of the origin of the edge in the cumDegs array.
 \end{enumerate}
 
 \bigskip
