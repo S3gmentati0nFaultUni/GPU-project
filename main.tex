@@ -113,18 +113,105 @@ The specific implementation that I chose to follow is shown in~\cite{generic-he-
 
 The graph returned in the last step is a single supervertex containing the \mst.
 
-In the following sections I will be going through the overall implementation roadmap~\ref{sec:implementation-roadmap}, the implementation of the scan procedure~\ref{sec:parallel-scan}, an analysis of the algorithm's performance~\ref{sec:performance-analysis} and in the last section I will be going over an analysis of some of the problems identified during the implementation and some further development that could be made to make the implementation better~\ref{sec:final-thoughts}. 
+\bigskip
+\phantomsection
+\makeatletter\def\@currentlabel{\texttt{(II)}}\makeatother
+\label{sec:graph-structure}
+\noindent
+\textbf{GRAPH STRUCTURE:}
+\\
 
 \bigskip
 \phantomsection
-\makeatletter\def\@currentlabel{\texttt{(I)}}\makeatother
-\label{sec:implementation-roadmap}
+\makeatletter\def\@currentlabel{\texttt{(III)}}\makeatother
+\label{sec:cpu-implementation}
 \noindent
-\textbf{IMPLEMENTAITON ROADMAP:}
+\textbf{CPU IMPLEMENTATION:}
 \\
+I will not cover at length the CPU implementation since it's quite straightforward, at first I opted
+for an extremely naive implementation of Prim's algorithm, consisting of two \texttt{for} cycles.
+Since the implementation worked but was in fact extremely slow if compared to finer solvers I
+decided to scrap it in favour of a more efficient implementation of the Prim's algorithm based on
+the use of a simple heap to sort the edges needed to build the \mst.
+
+As I showed in~\ref{sec:intro} the time complexity of Prim's solver thus implemented is $\O(m \cdot
+\log{n})$. I decided to implement Prim's algorithm instead of \brka's solver since the first one is
+much simpler as far as efficiency goes the two solvers have comparable speeds.
+
+\bigskip
+\phantomsection
+\makeatletter\def\@currentlabel{\texttt{(IV)}}\makeatother
+\label{sec:gpu-implementation}
+\noindent
+\textbf{GPU IMPLEMENTATION:}
+\\
+As far as the GPU implementation goes I chose to follow, as I alluded to in ~\ref{sec:intro}, the
+implementation in \cite{generic-he-boruvka} which is meant to be a highly generic and highly
+efficient parallel variant of \brka's solver to implement on the GPU.
+
+Provided that I do not have enough knowledge in the field to reliably criticize somebody else's work
+in the field I can state that the solution they provide is not as general as the authors want it to
+be. The reason behind my statement is hidden in how the solution is computed. Per
+\cite{generic-he-boruvka} every part of the solution can be implemented as a distinct kernel
+containing a thread per vertex (such an approach is referred to as \textit{topologic} in the
+literature)
 \begin{enumerate}
-	\item Started with a naive resolution of the problem using Prim's algorithm with no additional enrichment for the CPU code
-	\item Written a naive solver for the problem that leverages the GPU capacities
+	\item\label{item:choose-lightest} (\textit{choose lightest}) this operation picks the
+		lightest connection for every vertex to the neighbourhood by simpling cycling over
+		the outgoing edges, to have improved locality if two edges share the same weight pick the one with the destination id. The results are stored in the \texttt{d\_candidates} array.
+	\item\label{item:mirror-removal} (\textit{Remove mirrored edges}) this operation is meant to
+		remove cycles from the graph. To understand how it works let's suppose for a moment
+		that the candidate edge for vertex $v$ is $(v, u)$, let's now suppose that the
+		candidate edge for $u$ is the mirrored edge $(u, v)$, then the kernel will replace
+		$(v, u)$ contained in \texttt{d\_candidates} with the default value
+		\texttt{UINT\_MAX}.
+	\item\label{item:coloration} (\textit{Initialize and propagate the colors}) this operation
+		is meant to identify the connected components inside the graph and can be
+		implemented as a recursive procedure having a kernel as the recursion head and then
+		a series of \texttt{\_\_device\_\_} function calls to propagate the colors in the nodes.
+	\item\label{item:vertex-rename} (\textit{Create new vertex ids}) to rename the vertices a
+		new array is created (in my implementation is \texttt{d\_flag}) that contains a $0$
+		in every position where the color of the vertex is different from the vertex id and
+		a $1$ otherwise.
+		
+		To understand why the re-labelling is necessary we can consider for instance a graph
+		in which we only have $2$ colors but one of the colored vertices is $0$ and the
+		other one is $750$, if the vertex id did not change some other technique would need
+		to be invented to solve the next step.
+	\item\label{item:graph-contraction} (\textit{Count, assign and insert new edges}) this
+		operation needs to be split in a series of simpler kernels
+		\begin{itemize}
+			\item\label{item:count-edges} (\textit{Count edges}) A simple kernel will be
+				going through the neighbourhood of every vertex and it compares the
+				color of the vertex with the color of the supervertex of the
+				destination. If the colors are different it means that the two
+				supervertices belong to different components.
+
+				The result of the process will be cumulated inside an array (in my
+				implementation is \texttt{d\_cumDegs})
+
+				Afterwards a scan procedure is computed on the \texttt{d\_cumDegs}
+				array, the result is going to be a fully functioning cumulated
+				degree array as shown in ~\ref{sec:graph-structure}.
+			\item\label{item:graph-regen} (\textit{Graph regeneration}) This step
+				generates the new neighbour and weight array, this is done by
+				visiting every neighbour for every vertex as shown in
+				~\ref{item:count-edges}. Edges intra-component are removed while
+				duplicated ones are kept because it's easier than handling their removal.
+		\end{itemize}
+\end{enumerate}
+Most of the kernels proposed in the solution can be written as \texttt{for} loops that go through
+the various neighbours in the adjacency lists, while this solution works well (as will be shown in a
+future section) the results for this kind of approach are far from generalizable whenever the graph
+structure is not uniform. Even if the implementation uses texture memory to increment memory access
+speeds ~\cite{gpu-programming-cuda} for the fundamental arrays shown in ~\ref{sec:graph-structure}, 
+due to the strong locality of the memory accesses, the solver's performance suffer deeply because of 
+the non-uniformity of the graph structure because it makes some cycles within the kernels to have a 
+longer runtime compared to others and this implies a very strong imbalance in the work of the threads.
+
+
+
+\begin{enumerate}
 	\item The solution originally written for the CPU could not keep up with the GPU solver I therefore implemented a small Heap class that was able to move the CPU solver to the next level
 	\item The GPU implementation found itself struggling essentially because of the nature of the problem and the not-so-efficient implementation
 	\item Changed the GPU implementation to use an hybrid of CPU code and GPU kernels, the CPU code is used in settings such as the scan, which is more efficient than using a naive GPU kernel, as well as the contraction operation
