@@ -1,0 +1,100 @@
+10000
+CPU
+Computing the MST solution for a graph of size 10000
+Source for the MST: 5306
+Time elapsed for CPU computation: 1.41194
+Total weight: 113772
+
+
+GPU
+THE CALCULATION OF THE MST IS COMPLETE
+THE MST WEIGHT IS: 113772
+Total elapsed time: 12.17110 seconds
+
+
+GPU EFFICIENT
+THE CALCULATION OF THE MST IS COMPLETE
+THE MST WEIGHT IS: 113772
+Total elapsed time: 5.19715 seconds
+
+
+30000
+CPU
+Computing the MST solution for a graph of size 30000
+Source for the MST: 6736
+Time elapsed for CPU computation: 13.694
+Total weight: 106015
+
+
+GPU
+THE CALCULATION OF THE MST IS COMPLETE
+THE MST WEIGHT IS: 106015
+Total elapsed time: 94.31441 seconds
+
+
+GPU EFFICIENT
+THE CALCULATION OF THE MST IS COMPLETE
+THE MST WEIGHT IS: 106015
+Total elapsed time: 39.00451 seconds
+
+-----------------------------------------------------------------------------------------------------
+20000
+CPU
+Computing the MST solution for a graph of size 20000
+Source for the MST: 6003
+Time elapsed for CPU computation: 6.49868
+Total weight: 111239
+
+
+GPU
+THE CALCULATION OF THE MST IS COMPLETE
+THE MST WEIGHT IS: 111239
+Total elapsed time: 41.59097 seconds
+
+
+
+GPU EFFICIENT
+THE CALCULATION OF THE MST IS COMPLETE
+THE MST WEIGHT IS: 111239
+Total elapsed time: 16.15437 seconds
+
+
+
+30000
+GPU EFFICIENT
+THE CALCULATION OF THE MST IS COMPLETE
+THE MST WEIGHT IS: 106015
+Total elapsed time: 32.79427 seconds
+
+--------------------------------------------------------------------------------------------------------
+20000
+GPU EFFICIENT (NEW FIND-MINIMUM KERNEL)
+THE CALCULATION OF THE MST IS COMPLETE
+THE MST WEIGHT IS: 50632
+Total elapsed time: 9.82475 seconds
+The time distribution is the following:
+	First phase: 2.86622
+	Second phase: 0.44761
+	Third phase: 0.00081
+	Fourth phase: 0.00011
+	Fifth phase: 6.50995
+	
+---------------------------------------------------------------------------------------------------------
+20000  0.025  50000  4359806
+GPU-E
+THE CALCULATION OF THE MST IS COMPLETE
+THE MST WEIGHT IS: 23556464
+Total elapsed time: 0.22708 seconds
+
+The time distribution is the following:
+	First phase: 0.02475
+	Second phase: 0.00766
+	Third phase: 0.00028
+	Fourth phase: 0.00010
+	Fifth phase: 0.19425
+	
+CPU-E
+Computing the MST solution for a graph of size 20000
+Source for the MST: 11213
+Time elapsed for CPU computation: 0.076636
+Total weight: 23556464
