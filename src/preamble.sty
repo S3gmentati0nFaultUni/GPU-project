@@ -1,6 +1,7 @@
 \usepackage{a4wide}
 
 \usepackage[english]{babel}
+\usepackage{csquotes}
 
 \usepackage{amsthm, amsmath, amssymb, amsfonts}
 \usepackage[makeroom]{cancel}
@@ -28,6 +29,9 @@
 \usepackage{algorithmic}
 
 \usepackage{lmodern}
+
+\usepackage{longtable}
+\renewcommand{\arraystretch}{1.2}
 
 \usepackage{hyperref}
 \hypersetup{
@@ -146,6 +150,7 @@
 
 % Neighbor set
 \newcommand{\ngbrs}[2][G]{N_{#1}(#2)}
+\newcommand{\neighbourhood}[1]{\mathcal{N}(#1)}
 
 % Degree macros
 % Associated to the graph itself
@@ -213,6 +218,7 @@
 \newcommand{\brka}{Bor\r{u}vka}
 \newcommand{\mst}{\textsc{Mst} }
 \newcommand{\mstp}{\textsc{Mstp} }
+\newcommand{\csr}{\textsc{CSR} }
 
 \tikzset{
 	defv/.style={circle,minimum size=0.5cm,fill=cyan!20,draw=teal},
