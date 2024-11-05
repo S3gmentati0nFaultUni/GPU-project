@@ -1,4 +1,3 @@
-% !Tex TS-program = lualatex
 \documentclass[a4paper,10pt]{article}
 \usepackage[utf8]{inputenc}
 \usepackage{src/preamble}
@@ -196,6 +195,17 @@ literature)
 Most of the kernels proposed in the solution can be written as \texttt{for} loops that go through
 the various neighbours in the adjacency lists and, since there is no dependency between the various vertices~\cite{generic-he-boruvka}, the various steps can be computed in parallel for a major efficiency boost. Synchronization is only ever needed inside the \texttt{scan} functions, to make sure that all of the threads have a consistent view of shared memory, furthermore atomic operations are required in some instances to offer a solution to race conditions.
 
+As far as my implementation goes I created two similar variants of the same solver, having different characteristics because of the many experiments I have done during the past month.
+
+The first implementation, which is referred to as GPU-u in the following, uses a graph memorized in unified memory to do all the computations and follows more closely what is being proposed in the original paper.
+
+The second implementation, which is referred to as GPU-e in the following, differs from the first in three ways:
+\begin{enumerate}
+	\item It uses a different technique to compute the scan which is based on offloading a part of the load of the computation to the CPU.
+	\item It uses a different technique to compute the cumulated degrees array. Essentially it uses one thread per edge and then identifies the owner of the edge through a binary search inside the old cumDegrees array, which is sorted by definition. Once the origin is known the computation proceeds as normal, this idea came to me to try and lower the computational cost of doing a full \texttt{for} loop on the neighbourhood of every vertex.
+	\item It uses a different technique to compute the graph contraction. The prior idea applies here as well.
+\end{enumerate}
+
 \bigskip
 \phantomsection
 \makeatletter\def\@currentlabel{\texttt{(III)}}\makeatother\label{sec:performance-analysis}
@@ -242,7 +252,20 @@ Before discussing the results I want to point out that my GPU implementation gav
 	\caption{Performance metrics for the various platforms compared with the results in \cite{generic-he-boruvka}}
 	\label{fig:results}
 \end{figure}
-Computing the speedups for my GPU code, which is evidently less efficient than the one proposed in~\cite{generic-he-boruvka}, with respect to my CPU the results are in the neighbourhood of $\sim59\times$ to $\sim128\times$. Considering instead the results from the authors I get that the speedup is in between $\sim5\times$ and $\sim8\times$. Doing an analysis of the occupancy of the solution it's clear that it's suffering from the topological approach chosen to solve the problem.
+Computing the speedups for my GPU code, which is evidently less efficient than the one proposed in~\cite{generic-he-boruvka}, with respect to my CPU the results are in the neighbourhood of $\sim59\times$ to $\sim128\times$. Considering instead the results from the authors I get that the speedup is in between $\sim5\times$ and $\sim8\times$.
+
+The \emph{occupancy} measure for a kernel $\mathcal{K}$ on a GPU is defined as the ratio of active warps on an SM to the maximum number of active warps supported by the SM~\cite{def-occupancy}. To test for it Nvidia provides the tool Nsight Compute (\texttt{ncu}), which I used to gather the data regarding the occupancy for both the GPU approaches differing slightly in the choice of the kernels as shown in~\ref{sec:gpu-implementation}. The results have been plotted in figure~\ref{fig:occupancy}, as we can see the general occupancy is inversely proportional to the number of iterations, that was to be expected because I followed a topologic approach, which means that the number of threads used by each kernel is going to be just as many as it's required to occupy every single thred with the computation for one vertex.
+
+Probably the most interesting takeaway that we can get from Figure~\ref{fig:occupancy} is the fact that the two kernels \texttt{GraphContractionCopy} (GCC) and \texttt{cumulatedDegreesUpdateCopy} (CDUC) show on average to have much better occupancy compared to the original \texttt{graphContraction} (GC) and \texttt{cumulatedDegreesUpdate} (CDU). Albeit the implementation of the "copy" kernels is not extraordinary the approach is different, instead of having one thread per vertex in this second implementation I used one thread per edge, which in turn means that the GPU is going to be, on average, more occupied than it would otherwise be.
+
+\begin{figure}[!h]
+	\centering
+	\includegraphics[scale=0.5]{fig/occupancy.png}
+	\caption{Occupancy measurements for the two different approaches}
+	\label{fig:occupancy}
+\end{figure}
+
+The authors of the source material mentioned very briefly and just once the possibility of implementing a segmented scan approach for the \texttt{findCheapest} operation, I think that this approach, with some additional work, can be extended to most of the kernels and it could lead to an increase in occupancy and maybe in performance.
 
 \bigskip
 \phantomsection
