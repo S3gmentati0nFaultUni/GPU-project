@@ -21,7 +21,7 @@
 \noindent
 \textbf{ABSTRACT:}
 \\
-In this report I will be explaining the development process for my solution of the widely known \mstp. In the following I will be covering: the problem on a theoretical level~\ref{sec:intro}, the structure I chose to implement to keep the Graph structure in memory~\ref{sec:graph-structure}, briefly the CPU implementation~\ref{sec:cpu-implementation} and my GPU implementation~\ref{sec:gpu-implementation}, the results in terms of speedup and occupancy~\ref{sec:performance-analysis} and finally some conclusions regarding the project and the problem as a whole~\ref{sec:final-thoughts}.
+In this report I will explain the development process behind my solution to the well known \mstp. In the following sections I will be covering: the problem on a theoretical level~\ref{sec:intro}, the data structure implemented to keep the graph in memory~\ref{sec:graph-structure}, the CPU~\ref{sec:cpu-implementation} and GPU~\ref{sec:gpu-implementation} implementations, the results in terms of speedup and occupancy~\ref{sec:performance-analysis} and finally some conclusions regarding the project and the problem as a whole~\ref{sec:final-thoughts}.
 
 \bigskip
 
@@ -30,7 +30,7 @@ In this report I will be explaining the development process for my solution of t
 \noindent
 \textbf{INTRODUCTION TO THE PROBLEM:}
 \\
-The Minimum Spanning Tree Problem (\mstp for short) is a problem that has been studied for years and to this day finds many real world applications,to name a few:
+The Minimum Spanning Tree Problem (\mstp for short) is a problem that has been studied for years and to this day finds many real world applications, to name a few:
 \begin{enumerate}
 	\item It's possible to find different \mst-based techniques used to do image segmentation~\cite{maze-generation}~\cite{mst-segmentation-heuristic}.
 	\item Finding an \mst allows us to solve the Clustering problem, all we need to do is to compute an \mst and then drop its $k - 1$ most expensive edges~\cite{mst-applications}.
@@ -45,7 +45,7 @@ Prim's algorithm is the simplest solver for \mstp, given a graph $G= (V, E)$, le
 	\item Binary heap and adjacency list: $\O(m\log{n})$
 	\item Fibonacci heap and adjacency list: $\O(m + n\log{n})$
 \end{itemize}
-In my implementation I have implemented both the Na\"ive version and the one using a binary heap, more on this in section~\ref{sec:cpu-implementation}.
+In my implementation I have implemented both the Na\"ive version and the one using a binary heap, the first one was later scrapped because it resulted useless for benchmarking pourposes, more on this in section~\ref{sec:cpu-implementation}.
 
 Kruskal's algorithm is the alternative to Prim's algorithm and it works in time $\O(m\log{m})$ if implemented using classical data structures.
 
@@ -54,13 +54,13 @@ Kruskal's algorithm is the alternative to Prim's algorithm and it works in time 
 	\caption{\brka's algorithm}
 	\label{algo:boruvka-pseudocode}
 	\begin{algorithmic}[1]
-		\REQUIRE An undirected, connected and weighted graph $G$, a set of empty edges $T$
+		\REQUIRE An undirected, connected and weighted graph $G$, an empty set of edges $T$
 		\ENSURE An \mst$T$ built on graph $G$
 		\WHILE{vertices in $G$ connected by $T$ are disjoint}
 		\STATE start with an empty set of edges $E$
-		\FOR{every connected component}
+		\FOR{every connected component $\mathcal{C}$}
 		\STATE start with an empty set of edges $S$
-		\FOR{every vertex $v$ in the component}
+		\FOR{every vertex $v$ in $\mathcal{C}$}
 		\STATE add the cheapest edge going from $v$ to any other component to $S$
 		\ENDFOR
 		\STATE add the cheapest edge in $S$ to $E$
@@ -77,8 +77,8 @@ While parallel solutions based on Prim's or Kruskal's algorithm exists like~\cit
 \begin{enumerate}
 	\item\label{item:first-step} (\textit{choose lightest}) for every vertex the lightest edge is chosen in parallel.
 	\item\label{item:second-step} (\textit{find root}) for every vertex we find the root of the tree to which it belongs\footnote{It's important to keep in mind that vertices are actually supervertices.}.
-	\item\label{item:third-step} (\textit{rename vertices}) Since the graph after~\ref{item:fourth-step} is compressed, which means that the number of vertices decreases, then the roots in the graph need to be renamed.
-	\item\label{item:fourth-step} (\textit{graph compression}) The graph undergoes a compression step, the resulting graph will contain only the roots identified during~\ref{item:second-step} and the edges that connect component $\mathcal{C}_i$ to any other component $\mathcal{C}_j$, any edge contained within a component will be lost.
+	\item\label{item:third-step} (\textit{rename vertices}) Since the graph after~\ref{item:fourth-step} undergoes a contraction, the number of vertices decreases, then the roots in the graph need to be renamed.
+	\item\label{item:fourth-step} (\textit{graph contraction}) The graph undergoes a contraction, the resulting graph will contain only the roots identified during~\ref{item:second-step} and the edges that connect component $\mathcal{C}_i$ to any other component $\mathcal{C}_j$, any edge contained within a component will be lost.
 \end{enumerate}
 
 The specific implementation that I chose to follow is shown in~\cite{generic-he-boruvka} and is summarized by algorithm~\ref{algo:boruvka-parallel}
@@ -87,22 +87,20 @@ The specific implementation that I chose to follow is shown in~\cite{generic-he-
 	\caption{\brka's algorithm}\label{algo:boruvka-parallel}
 	\begin{algorithmic}[1]
 		\REQUIRE An undirected, connected and weighted graph $G(V, E)$
-		\ENSURE An \mst$T$ built on graph $G$
 		\WHILE{$|V| > 1$}
 		\STATE find the minimum edge per vertex (\ref{item:first-step})
-		\STATE remove mirrored edges
+		\STATE remove loops
 		\STATE initialize the colors
 		\WHILE{the coloring hasn't converged}
 		\STATE color propagation (\ref{item:second-step})
 		\ENDWHILE
 		\STATE create new vertex ids (\ref{item:third-step})
-		\STATE do graph compression (\ref{item:fourth-step})
+		\STATE do graph contraction (\ref{item:fourth-step})
 		\ENDWHILE
-		\STATE\RETURN $G$
 	\end{algorithmic}
 \end{algorithm}
 
-The graph returned in the last step is a single supervertex containing the \mst.
+The graph returned in the last step is a single supervertex and the \mst is actually built out of the edges that are pruned in the loop removal process.
 
 \bigskip
 \phantomsection
@@ -110,14 +108,15 @@ The graph returned in the last step is a single supervertex containing the \mst.
 \noindent
 \textbf{GRAPH STRUCTURE:}
 \\
-Before discussing the solution I want to introduce the memorization strategy for the graph structure. When working with graphs in CPU code it's common to choose between to alternatives:
+Before discussing the solution I want to introduce the memorization strategy for the data structure. Normally, when working with graphs, the two data structures that come to mind are:
 \begin{itemize}
 	\item The \emph{adjacency matrix}, which represents any connection between two vertices, $i, j$ in the graph as a $1$ or a $0$ in a matrix\footnote{For simplicity's sale I consider an unweighted graph}. Let's suppose that the $|V|$ is $n$, then the amount of space occupied by a matrix in memory is $\O(n^2)$ while the cost of accessing element $(i, j)$, independently from the values of $i$ and $j$, is just $\O(1)$.
-	\item The \emph{adjacency list}, which stores only a reference to the neighbour for every node, usually memorized as an array of lists, therefore if $j$ is neighbour for vertex $i$ a reference to $j$ will be placed in the list of neighbours of $i$. Supposing that $|E|$ is $m$, then the cost of keeping such a structure in memory is $O(m + n)$.
+	\item The \emph{adjacency list}, which stores only a reference to the neighbour for every node, usually memorized as an array of lists, therefore if $j$ is neighbour for vertex $i$ a reference to $j$ will be placed in the list of neighbours of $i$. Supposing that $|E|$ is $m$, then the cost of keeping such a structure in memory is $O(m + n)$ and the cost of accessing any neighbour for a generic vertex $i$ is going to be $\O(n)$, because in the worst case we could be accessing a graph in which all of the vertices are linked to $i$.
 \end{itemize}
-The approach I followed for the implementation of the algorithm is, to quote the authors of~\cite{generic-he-boruvka} "a compromise between adjacency list and adjacency matrix". The \csr format is a form of encoding linearizing the structure of adjacency lists, to save space, using arrays to keep the adjacency lists in memory, to save time on the accesses. The number of additional arrays implemented in \csr vary slightly in the literature~\cite{csr-kelly}~\cite{csr-wheatman}~\cite{generic-he-boruvka}, for my implementation I chose to stray from the 4-vector solution since it would have only complicated the structure of the graph without holding any additional information:
+The approach I followed for the implementation of the algorithm is, to quote the authors of~\cite{generic-he-boruvka} "a compromise between adjacency list and adjacency matrix". The \csr format is a form of encoding linearizing the structure of adjacency lists, to save space, using arrays to keep the adjacency lists in memory, to save time. The number of additional arrays implemented in \csr vary slightly in the literature~\cite{csr-kelly}~\cite{csr-wheatman}~\cite{generic-he-boruvka}, for my implementation I chose to stray from the 4-vector solution used in~\cite{generic-he-boruvka}, since it would have only complicated the structure of the graph without holding any additional information.
+The array structure for my implementation consists of:
 \begin{itemize}
-	\item A \emph{cumulated degrees} array, it's an array cumulating the degrees of the vertices in the graph.
+	\item A \emph{cumulated degrees} array, it's an array cumulating the degrees of the vertices in the graph, used also to compute the degree of every vertex.
 	\item An \emph{neighbours} array, which is a linearization of the graph's adjacency list.
 	\item A \emph{weights} array, containing the weight of every edge $(i, j)$ in the graph.
 \end{itemize}
@@ -126,7 +125,7 @@ An example of the CSR structure is shown in Figure~\ref{tikz:csr-struct}.
 \begin{figure}
 	\centering
 	\input{fig/tikz/graph_struct.tikz}
-	\caption{An example of graph structure converted in CSR}
+	\caption{An example of a graph's \csr structure}
 	\label{tikz:csr-struct}
 \end{figure}
 
@@ -138,11 +137,11 @@ An example of the CSR structure is shown in Figure~\ref{tikz:csr-struct}.
 \\
 I will not cover at length the CPU implementation since it's quite straightforward, at first I opted
 for an extremely na\"ive implementation of Prim's algorithm, consisting of two \texttt{for} cycles.
-Since the implementation worked but was in fact extremely slow if compared to finer solvers I
-decided to scrap it in favour of a more efficient implementation of the Prim's algorithm based on
+Since the implementation worked but was in fact extremely slow compared to finer solvers I
+decided to scrap it in favour of a more efficient implementation of Prim's algorithm based on
 the use of a simple heap to sort the edges needed to build the \mst.
 
-Since the time complexity of Prim's solver thus implemented is $\O(m \cdot \log{n})$, as shown in\ref{sec:intro}. I decided to implement Prim's algorithm instead of \brka's solver since the first one is much simpler and, as far as efficiency goes, the two solvers have comparable speeds.
+Since time complexity of Prim's solver using a heap is $\O(m \cdot \log{n})$, as shown in\ref{sec:intro}. I decided to implement Prim's algorithm instead of \brka's solver since the first one is much simpler and, as far as efficiency goes, the two solvers have comparable speeds.
 
 \bigskip
 \phantomsection
@@ -154,70 +153,41 @@ As I alluded to in~\ref{sec:intro} I chose to follow~\cite{generic-he-boruvka} a
 
 Per~\cite{generic-he-boruvka} every part of the solution can be implemented as a distinct kernel
 deploying a thread per vertex (such an approach is referred to as \textit{topologic} in the
-literature)
+literature), to better understand every step I took the example graph shown in~\ref{tikz:csr-struct} and I computed the first iteration of the algorithm step-by-step.
+
+Following Algorithm~\ref{algo:boruvka-parallel} one iteration of the outer loops consists of:
 \begin{enumerate}
-	\item\label{item:choose-lightest} (\textit{choose lightest}) this operation picks the
-	lightest connection for every vertex to the neighbourhood by simpling cycling over
-	the outgoing edges, to have improved locality if two edges share the same weight pick the one with the smaller destination id. The results are stored in the \texttt{d\_candidates} array.
-	\item\label{item:mirror-removal} (\textit{Remove mirrored edges}) this operation is meant to
-	remove cycles from the graph. To understand how it works let's suppose for a moment
-	that the candidate edge for vertex $v$ is $(v, u)$, let's now suppose that the
-	candidate edge for $u$ is the mirrored edge $(u, v)$, then the kernel will replace
-	$(v, u)$ contained in \texttt{d\_candidates} with the default value
-	\texttt{UINT\_MAX}.
-	\item\label{item:coloration} (\textit{Initialize and propagate the colors}) this operation
-	is meant to identify the connected components inside the graph and can be
-	implemented as a recursive procedure having a kernel as the recursion head and then
-	a series of \texttt{\_\_device\_\_} function calls to propagate the colors in the nodes\footnote{This operation can probably be implemented with Dynamic Parallelism and a series of \textit{Fire and forget kernels} alongside a \textit{Tail launch} kernel to recover the necessary data}.
-	\item\label{item:vertex-rename} (\textit{Create new vertex ids}) to rename the vertices a
-	new array is created (in my implementation is \texttt{d\_flag}) that contains a $0$
-	in every position where the color of the vertex is different from the vertex id and
-	a $1$ otherwise.
-
-	%% NNHCPT
-	To understand why the re-labelling is necessary we can consider for instance a graph
-	in which we only have $2$ colors but one of the colored vertices is $0$ and the
-	other one is $750$, if the vertex id did not change some other technique would need
-	to be invented to solve the next step.
-	%%
-	\item\label{item:graph-contraction} (\textit{Count, assign and insert new edges}) this
-	operation needs to be split in a series of simpler kernels
+	\item\label{item:choose-lightest} (\textit{choosing the lightest}), as shown in~\ref{tikz:find-cheapest}, this operation picks the lightest outgoing edge in every vertex neighbourhood in parallel. The result is going to be a single reference to the outgoing edge which will be stored in the \texttt{candidates} array.
+	
+	Weight ties are broken by picking the neighbour with the smallest vertex-id.
+	\item\label{item:mirror-removal} (\textit{removing loops}), as shown in~\ref{tikz:loop-removal}, this operation is meant to remove cycles from the graph. Whenever a cycle between vertices $i$ and $j$ is identified only the copy of the edge associated to the vertex with the highest vertex-id is kept, the other is set to the default value of \texttt{UINT\_MAX}.
+	\item\label{item:coloration} (\textit{Initializing and propagating colors}), as shown in~\ref{tikz:coloration}, this operation is meant to identify connected components inside the graph and can be implemented recursively using a kernel as recursion head and a series of \texttt{\_\_device\_\_} function calls to propagate the colors.
+	
+	The resulting \texttt{colors} array will contain the vertex-id of vertices with undefined candidate value and, for all other vertices, the color value will be computed recursively by using the color of the neighbour pointed by the \texttt{candidates} array.
+	\item\label{item:vertex-rename} (\textit{Renaming vertices}), as shown in~\ref{tikz:sv-rename}, to rename the vertices a new array is created (in my implementation is \texttt{flag}) that contains a $0$ in every position where the color of the vertex is different from the vertex id and a $1$ otherwise. Afterwards an exclusive scan procedure is comptued on \texttt{flag} to compute the new vertex-ids.
+	\item\label{item:graph-contraction} (\textit{Counting, assign and insert new edges}), as shown in the last part of Figure~\ref{tikz:first-iteration} this bigger operation has to be split into three different steps:
 	\begin{itemize}
-		\item\label{item:count-edges} (\textit{Count edges}) A simple kernel will be
-		going through the neighbourhood of every vertex and it compares the
-		color of the vertex with the color of the supervertex of the
-		destination. If the colors are different it means that the two
-		supervertices belong to different components.
-
-		The result of the process will be cumulated inside an array (in my
-		implementation is \texttt{d\_cumDegs})
-
-		Afterwards a scan procedure is computed on the \texttt{d\_cumDegs}
-		array, the result is going to be a fully functioning cumulated
-		degree array as shown in~\ref{sec:graph-structure}.
-		\item\label{item:graph-regen} (\textit{Graph regeneration}) This step
-		generates the new neighbour and weight array, this is done by
-		visiting every neighbour for every vertex as shown in~\ref{item:count-edges}. Edges intra-component are removed while duplicated ones are kept because it's easier than handling their removal.
+		\item\label{item:count-edges} (\textit{Count edges}), as shown in~\ref{tikz:edge-count}, a simple kernel will be checking every edge in a vertex's neighbourhood, comparing the color of the source with the color of the destination (effectively comparing the connected components they belong to).
+		
+		If they belong to different connected components the result will be added to the \texttt{newCumDegs} array that is being constructed.
+		\item\label{item:scan-ncd} (\textit{Cumulated degrees computation}), as shown in~\ref{tikz:scan-ncdegs}, the resulting \texttt{newCumDegs}, which contains the outdegrees for every connected component, undergoes a round of scan to finalize the computation of the cumulated degrees vector for the contracted graph.
+		\item\label{item:graph-regen} (\textit{Graph contraction}), as shown in~\ref{tikz:graph-contraction}, this step generates the new neighbour and weight array using a logic that is very similar to the one used for the calculation of the new number of outgoing edges.
+		
+		While edges intra-component are removed, duplicated ones are kept, because it's easier than handling their removal.
 	\end{itemize}
 \end{enumerate}
-Most of the kernels proposed in the solution can be written as \texttt{for} loops that go through
-the various neighbours in the adjacency lists and, since there is no dependency between the various vertices~\cite{generic-he-boruvka}, the various steps can be computed in parallel for a major efficiency boost. Synchronization is only ever needed inside the \texttt{scan} functions, to make sure that all of the threads have a consistent view of shared memory, furthermore atomic operations are required in some instances to offer a solution to race conditions.
-
-Using the graph that was shown in Figure~\ref{tikz:csr-struct} an example of the application of the first iteration of the algorithm is shown in Figure~\ref{tikz:first-iteration}.
+Most of the kernels proposed in the solution can be written to use one single thread per vertex and a \texttt{for} loop to cycle the neighbourhood, since there is no dependency between the various vertices~\cite{generic-he-boruvka}, the steps can be computed in parallel for a major efficiency boost. Synchronization is only ever needed inside the \texttt{scan} functions, to make sure that all of the threads have a consistent view of shared memory, atomic operations are required in some instances to offer a solution to race conditions.
 \begin{figure}
 	\input{fig/tikz/first_iteration.tikz}
-	\caption{Example of the first iteration}
+	\caption{Example of the first iteration}\label{tikz:first-iteration}
 \end{figure}
+My implementation consists of two approaches, one that follows the idea explained in the source material, referred to as GPU-u, and the other being more "experimental", referred to as GPU-e, deriving from some experiments I made.
 
-As far as my implementation goes I created two similar variants of the same solver, having different characteristics because of the many experiments I have done during the past month.
-
-The first implementation, which is referred to as GPU-u in the following, uses a graph memorized in unified memory to do all the computations and follows more closely what is being proposed in the original paper.
-
-The second implementation, which is referred to as GPU-e in the following, differs from the first in three ways:
+GPU-e differs essentially in three ways:
 \begin{enumerate}
-	\item It uses a different technique to compute the scan which is based on offloading a part of the load of the computation to the CPU.
-	\item It uses a different technique to compute the cumulated degrees array. Essentially it uses one thread per edge and then identifies the owner of the edge through a binary search inside the old cumDegrees array, which is sorted by definition. Once the origin is known the computation proceeds as normal, this idea came to me to try and lower the computational cost of doing a full \texttt{for} loop on the neighbourhood of every vertex.
-	\item It uses a different technique to compute the graph contraction. The prior idea applies here as well.
+	\item It uses a different technique to compute the scan which is based on offloading a part of the computation to the CPU.
+	\item It uses a different technique to compute the cumulated degrees array. Essentially it uses one thread per edge and then identifies the owner of the edge through a binary search inside the old cumDegrees array, which is sorted by definition. Once the origin is known the computation proceeds as normal.
+	\item It uses a different technique to compute the graph contraction. I derived a technique similar to the prior.
 \end{enumerate}
 
 \bigskip
@@ -226,7 +196,7 @@ The second implementation, which is referred to as GPU-e in the following, diffe
 \noindent
 \textbf{PERFORMANCE ANALYSIS:}
 \\
-Performance analysis has been carried out using an online machine through the Google Colab hosting service\footnote{\url{https://colab.research.google.com/}}, the machine specs, gathered through tools like \texttt{/proc/cpuinfo} and \texttt{/proc/meminfo}, alongside \texttt{nvidia-smi} and the official documentation~\cite{t4-info}~\cite{t4-product-brief}, are listed in~\ref{tbl:system}
+Development and performance analysis have been carried out using the Google Colab hosting service\footnote{\url{https://colab.research.google.com/}}, the machine specs, gathered through tools like \texttt{/proc/cpuinfo} and \texttt{/proc/meminfo}, alongside \texttt{nvidia-smi} and the official documentation~\cite{t4-info}~\cite{t4-product-brief}, are listed in~\ref{tbl:system}
 \begin{center}
 	\begin{longtable}{|c|c|c|}
 		\caption{System information}\label{tbl:system}
@@ -245,7 +215,7 @@ Performance analysis has been carried out using an online machine through the Go
 		\textbf{Architecture}               & N.A.                                                                                                                & Turing
 	\end{longtable}
 \end{center}
-All of the benchmarks conducted are part of the tests provided for the 9th challenge by DIMACS\footnote{DIscrete MAthematics \& theoretical Computer Science center (\url{https://www.diag.uniroma1.it/challenge9/download.shtml})} center, the tests I used to get the results shown in~\ref{fig:results} are listed in table~\ref{tbl:benchmarks}.
+All of the benchmarks conducted are part of the tests provided for DIMACS\footnote{DIscrete MAthematics \& theoretical Computer Science center (\url{https://www.diag.uniroma1.it/challenge9/download.shtml})} center 9th challenge, the tests I used to get the results shown in~\ref{fig:results} are listed in table~\ref{tbl:benchmarks}.
 \begin{longtable}{|c|c|c|}
 	\caption{Benchmark dimensions}\label{tbl:benchmarks}
 	\\\hline\textbf{Benchmark} & \textbf{Node size} & \textbf{Edge size} \\\hline\hline
@@ -259,7 +229,9 @@ All of the benchmarks conducted are part of the tests provided for the 9th chall
 	\textit{Great Lakes}             & $\num{2758119}$  & $\num{6885658}$ \\\hline
 	\textit{Eastern USA}             & $\num{3598623}$  & $\num{8778114}$
 \end{longtable}
-Before discussing the results I want to point out that my GPU implementation gave very good results compared to the CPU code I wrote in the beginning, therefore in Figure~\ref{fig:results}, I decided to include both the GPU and CPU results listed in the original paper~\cite{generic-he-boruvka}. While I believe the CPU to be directly comparable with my results, since the architecture of the system used to test the code is closely related to the hardware that is running underneath Colab's environment, the GPU results are there more as a testament to the work that has been done prior, since their card is older and slower than the one offered by Colab and which technical specifications are listed in~\ref{tbl:system}.
+Before discussing the results I want to point out that my GPU implementation gave very good results compared to the CPU code I wrote in the beginning, therefore in Figure~\ref{fig:results}, I decided to include both the GPU and CPU results listed in the original paper~\cite{generic-he-boruvka}.
+
+While I believe the CPU to be directly comparable with my results, since the architecture of the system used to test the code is closely related to the hardware that is running underneath Colab's environment, the plotted GPU results are more of a testament to the work that has been done prior.
 \begin{figure}
 	\centering
 	\includegraphics[scale=0.4]{fig/benchmarks.png}
@@ -268,18 +240,16 @@ Before discussing the results I want to point out that my GPU implementation gav
 \end{figure}
 Computing the speedups for my GPU code, which is evidently less efficient than the one proposed in~\cite{generic-he-boruvka}, with respect to my CPU the results are in the neighbourhood of $\sim59\times$ to $\sim128\times$. Considering instead the results from the authors I get that the speedup is in between $\sim5\times$ and $\sim8\times$.
 
-To further check the timings for my implementation I ran the same test (the East (E) benchmark) $5$ times, took the average and standard deviation of the elapsed times and plotted them in Figure~\ref{fig:avg-std-timings} where the two approaches are compared. Keeping the considerations limited to the results plotted in~\ref{fig:avg-std-timings} it's clear that the better solution is to stick with higher thread counts; that is because for smaller thread blocks the results are either: worse, in the case of the normal GPU-U approach, or have a higher instability for the GPU-E approach. Furthermore this consolidates the idea that the GPU-E approach results ever so slightly better than the original GPU-U one.
-
-\begin{wrapfigure}{l}{0.5\textwidth} % 'l' for left, width set to 40% of text width
+To further check the timings for my implementation I ran the same test (the East (E) benchmark) $5$ times, took the average and standard deviation of the elapsed times and plotted them in Figure~\ref{fig:avg-std-timings} where results for GPU-e and GPU-u are compared. Keeping the considerations limited to the results plotted in~\ref{fig:avg-std-timings} it's clear that the better solution is to stick with higher thread counts; that is because for smaller thread blocks the results are either: worse, in the case of the normal GPU-u approach, or have a higher instability for the GPU-e approach. Furthermore this consolidates the idea that the GPU-e approach results ever so slightly better than the original GPU-u one.
+\begin{figure}
 	\centering
-	\includegraphics[width=0.4\textwidth]{fig/timings.png} % Adjust width as needed
+	\includegraphics[width=0.4\textwidth]{fig/timings.png}
 	\caption{Performance metrics for the two GPU implementations with respect to varying thread block size}
 	\label{fig:avg-std-timings}
-\end{wrapfigure}
-\noindent The \emph{occupancy} measure for a kernel $\mathcal{K}$ on a GPU is defined as the ratio of active warps on an SM to the maximum number of active warps supported by the SM~\cite{def-occupancy}. To test for it Nvidia provides the tool Nsight Compute (\texttt{ncu}), which I used to gather the data regarding the occupancy for both the GPU approaches differing slightly in the choice of the kernels as shown in~\ref{sec:gpu-implementation}. The results have been plotted in figure~\ref{fig:occupancy}, as we can see the general occupancy is inversely proportional to the number of iterations, that was to be expected because I followed a topologic approach, which means that the number of threads used by each kernel is going to be just as many as it's required to occupy every single thred with the computation for one vertex.
+\end{figure}
+The \emph{occupancy} metric for a kernel $\mathcal{K}$ on a GPU is defined as the ratio of active warps on an SM to the maximum number of active warps supported by the SM~\cite{def-occupancy}. To test for it Nvidia provides the tool Nsight Compute (\texttt{ncu}). The results have been plotted in figure~\ref{fig:occupancy}, as we can see the general occupancy is inversely proportional to the number of iterations, that was to be expected because I followed a topologic approach, which means that the number of threads used by each kernel is going to be just as many as it's required to occupy every single thred with the computation for one vertex.
 
-\medskip
-\noindent Probably the most interesting takeaway that we can get from Figure~\ref{fig:occupancy} is the fact that the two kernels \texttt{GraphContractionCopy} (GCC) and \texttt{cumulatedDegreesUpdateCopy} (CDUC) show on average to have much better occupancy compared to the original \texttt{graphContraction} (GC) and \texttt{cumulatedDegreesUpdate} (CDU). Albeit the implementation of the "copy" kernels is not extraordinary the approach is different, instead of having one thread per vertex in this second implementation I used one thread per edge, which in turn means that the GPU is going to be, on average, more occupied than it would otherwise be.
+Probably the most interesting takeaway that we can get from Figure~\ref{fig:occupancy} is the fact that the two kernels \texttt{GraphContractionCopy} (GCC) and \texttt{cumulatedDegreesUpdateCopy} (CDUC) show on average to have much better occupancy compared to the original \texttt{graphContraction} (GC) and \texttt{cumulatedDegreesUpdate} (CDU). Albeit the implementation of the "copy" kernels is not extraordinary, the approach is different, instead of having one thread per vertex in this second implementation I used one thread per edge, which in turn means that the GPU is going to be, on average, more occupied than it would otherwise be and it's less impacted by the contraction operation performed on the graph at every iteration of the loop.
 
 \begin{figure}[!h]
 	\centering
@@ -288,21 +258,21 @@ To further check the timings for my implementation I ran the same test (the East
 	\label{fig:occupancy}
 \end{figure}
 
-The authors of the source material mentioned very briefly and just once the possibility of implementing a segmented scan approach for the \texttt{findCheapest} operation, I think that this approach, with some additional work, can be extended to most of the kernels and it could lead to an increase in occupancy and maybe in performance.
-
 \bigskip
 \phantomsection
 \makeatletter\def\@currentlabel{\texttt{(IV)}}\makeatother\label{sec:final-thoughts}
 \noindent
 \textbf{CONCLUSIONS:}
 \\
-\mstp will never stop to amaze due to how much can be done with the solution to a relatively simple problem. As I explained in~\ref{sec:intro} \mstp solvers have been used and are being used extensively to solve a wide gamma of larger problems.
+\mstp will never stop to amaze due to how much can be done with the solution to a relatively simple problem. As I explained in~\ref{sec:intro} \mstp solvers have been used and are being used extensively to solve a wide gamma of larger problems, therefore there is no "being too fast".
 
-In the previous sections I explained how I got to the solution following somebody else's footsteps but much is still unknown, although the original paper was published under the title "A generic and highly efficient parallel variant of \brka's algorithm" it's immediately clear by taking a look at what kind of tests have been done on the solver (all similar to~\ref{tbl:benchmarks}) that the solution is not as "generic" as the authors would like it to be and it's highly likely it will perform as amazing as it does in the benchmarks shown in~\ref{fig:results} only if the graph is actually sparse (or the degree is superiorly limited for every vertex in the graph).
+In the previous sections I explained how I got to the solution following somebody else's footsteps but much is still unknown, although the original paper was published under the title "A generic and highly efficient parallel variant of \brka's algorithm" it's immediately clear by taking a look at what kind of tests have been done on the solver (all similar to~\ref{tbl:benchmarks}) that the solution is not as "generic" as the authors would like it to be and it's highly likely it will perform as amazing as it does in the benchmarks shown in~\ref{fig:results} only if the graph is actually sparse (or the degree is limited).
 
 As soon as the graph becomes more dense the complexity of computing simple kernels like the ones shown in~\ref{sec:gpu-implementation}, which contain a \texttt{for} loop to comply with the topologic approach, will explode~\footnote{The "critique" I just moved is merely based on speculation because I do not have access to the original source code}.
 
-It would be interesting, in this field, to keep on analyzing further techniques, considering more generic graphs. This can be acheived by analyzing the problem following the same approach I used in this impolementation, therefore solving \mstp through repeated contractions by rank; or by changing completely the way to get to the solution as a group did in~\cite{mst-bipartite} to avoid paying repeated rank costs in the contraction and edge count operations.
+As shown in Section~\ref{sec:performance-analysis} the results obtained using an approach different from the topologic one yielded better results on average, therefore it's safe to assume that trying an implementation entirely based on this different approach and takling the kernels that suffer the most might improve performance furhter. To this point, the authors of the source material mentioned very briefly, the possibility of implementing a segmented scan approach for the \texttt{findCheapest} operation, I think that this approach, with some additional work, can be extended to most of the kernels and it could lead to a more efficient version of GPU-e.
+
+It would be interesting, in this field, to keep on analyzing further techniques, considering more generic graphs. This can be acheived by trying to solve the problem following the same approach I used for this implementation, therefore using repeated contractions by rank; or by shifting paradigm~\cite{mst-bipartite}.
 
 \clearpage
 
