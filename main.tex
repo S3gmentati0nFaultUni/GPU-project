@@ -121,6 +121,14 @@ The approach I followed for the implementation of the algorithm is, to quote the
 	\item An \emph{neighbours} array, which is a linearization of the graph's adjacency list.
 	\item A \emph{weights} array, containing the weight of every edge $(i, j)$ in the graph.
 \end{itemize}
+An example of the CSR structure is shown in Figure~\ref{tikz:csr-struct}.
+
+\begin{figure}
+	\centering
+	\input{fig/tikz/graph_struct.tikz}
+	\caption{An example of graph structure converted in CSR}
+	\label{tikz:csr-struct}
+\end{figure}
 
 \bigskip
 \phantomsection
@@ -195,6 +203,12 @@ literature)
 Most of the kernels proposed in the solution can be written as \texttt{for} loops that go through
 the various neighbours in the adjacency lists and, since there is no dependency between the various vertices~\cite{generic-he-boruvka}, the various steps can be computed in parallel for a major efficiency boost. Synchronization is only ever needed inside the \texttt{scan} functions, to make sure that all of the threads have a consistent view of shared memory, furthermore atomic operations are required in some instances to offer a solution to race conditions.
 
+Using the graph that was shown in Figure~\ref{tikz:csr-struct} an example of the application of the first iteration of the algorithm is shown in Figure~\ref{tikz:first-iteration}.
+\begin{figure}
+	\input{fig/tikz/first_iteration.tikz}
+	\caption{Example of the first iteration}
+\end{figure}
+
 As far as my implementation goes I created two similar variants of the same solver, having different characteristics because of the many experiments I have done during the past month.
 
 The first implementation, which is referred to as GPU-u in the following, uses a graph memorized in unified memory to do all the computations and follows more closely what is being proposed in the original paper.
@@ -257,10 +271,10 @@ Computing the speedups for my GPU code, which is evidently less efficient than t
 To further check the timings for my implementation I ran the same test (the East (E) benchmark) $5$ times, took the average and standard deviation of the elapsed times and plotted them in Figure~\ref{fig:avg-std-timings} where the two approaches are compared. Keeping the considerations limited to the results plotted in~\ref{fig:avg-std-timings} it's clear that the better solution is to stick with higher thread counts; that is because for smaller thread blocks the results are either: worse, in the case of the normal GPU-U approach, or have a higher instability for the GPU-E approach. Furthermore this consolidates the idea that the GPU-E approach results ever so slightly better than the original GPU-U one.
 
 \begin{wrapfigure}{l}{0.5\textwidth} % 'l' for left, width set to 40% of text width
-    \centering
-    \includegraphics[width=0.4\textwidth]{fig/timings.png} % Adjust width as needed
-    \caption{Performance metrics for the two GPU implementations with respect to varying thread block size}
-    \label{fig:avg-std-timings}
+	\centering
+	\includegraphics[width=0.4\textwidth]{fig/timings.png} % Adjust width as needed
+	\caption{Performance metrics for the two GPU implementations with respect to varying thread block size}
+	\label{fig:avg-std-timings}
 \end{wrapfigure}
 \noindent The \emph{occupancy} measure for a kernel $\mathcal{K}$ on a GPU is defined as the ratio of active warps on an SM to the maximum number of active warps supported by the SM~\cite{def-occupancy}. To test for it Nvidia provides the tool Nsight Compute (\texttt{ncu}), which I used to gather the data regarding the occupancy for both the GPU approaches differing slightly in the choice of the kernels as shown in~\ref{sec:gpu-implementation}. The results have been plotted in figure~\ref{fig:occupancy}, as we can see the general occupancy is inversely proportional to the number of iterations, that was to be expected because I followed a topologic approach, which means that the number of threads used by each kernel is going to be just as many as it's required to occupy every single thred with the computation for one vertex.
 
