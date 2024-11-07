@@ -49,9 +49,9 @@ In my implementation I have implemented both the Na\"ive version and the one usi
 
 Kruskal's algorithm is the alternative to Prim's algorithm and it works in time $\O(m\log{m})$ if implemented using classical data structures.
 
-\brka's algorithm is a solver for the \mstp based on forests, a more verbose version of the algorithm shown in~\cite{boruvka-pseudocode} can be found in~\ref{algo:boruvka-pseudocode}
+\brkas algorithm is a solver for the \mstp based on forests, a more verbose version of the algorithm shown in~\cite{boruvka-pseudocode} can be found in~\ref{algo:boruvka-pseudocode}
 \begin{algorithm}
-	\caption{\brka's algorithm}
+	\caption{\brkas algorithm}
 	\label{algo:boruvka-pseudocode}
 	\begin{algorithmic}[1]
 		\REQUIRE An undirected, connected and weighted graph $G$, an empty set of edges $T$
@@ -73,7 +73,7 @@ Kruskal's algorithm is the alternative to Prim's algorithm and it works in time 
 
 Let us suppose that the size of the graph $|V|$ is $n$ and the number of edges $E$ is $m$, then the computational complexity of the pseudocode shown in~\ref{algo:boruvka-pseudocode} is $\O(m\log{n})$. This algorithm has been later reused in combination with other techniques to compute a solution for the \mstp very efficiently~\cite{boruvka-ackermann}~\cite{karger-klein-tarjan}.
 
-While parallel solutions based on Prim's or Kruskal's algorithm exists like~\cite{prim-parallel}~\cite{filter-kruskal} \brka's solver gained more traction thanks to its inherent parallelizability. Regardless of the implementation the core of the parallel variant can be identified in the following four steps as identified in~\cite{boruvka-steps}:
+While parallel solutions based on Prim's or Kruskal's algorithm exists like~\cite{prim-parallel}~\cite{filter-kruskal} \brkas solver gained more traction thanks to its inherent parallelizability. Regardless of the implementation the core of the parallel variant can be identified in the following four steps as identified in~\cite{boruvka-steps}:
 \begin{enumerate}
 	\item\label{item:first-step} (\textit{choose lightest}) for every vertex the lightest edge is chosen in parallel.
 	\item\label{item:second-step} (\textit{find root}) for every vertex we find the root of the tree to which it belongs\footnote{It's important to keep in mind that vertices are actually supervertices.}.
@@ -84,7 +84,7 @@ While parallel solutions based on Prim's or Kruskal's algorithm exists like~\cit
 The specific implementation that I chose to follow is shown in~\cite{generic-he-boruvka} and is summarized by algorithm~\ref{algo:boruvka-parallel}
 
 \begin{algorithm}
-	\caption{\brka's algorithm}\label{algo:boruvka-parallel}
+	\caption{\brkas algorithm}\label{algo:boruvka-parallel}
 	\begin{algorithmic}[1]
 		\REQUIRE An undirected, connected and weighted graph $G(V, E)$
 		\WHILE{$|V| > 1$}
@@ -141,7 +141,7 @@ Since the implementation worked but was in fact extremely slow compared to finer
 decided to scrap it in favour of a more efficient implementation of Prim's algorithm based on
 the use of a simple heap to sort the edges needed to build the \mst.
 
-Since time complexity of Prim's solver using a heap is $\O(m \cdot \log{n})$, as shown in\ref{sec:intro}. I decided to implement Prim's algorithm instead of \brka's solver since the first one is much simpler and, as far as efficiency goes, the two solvers have comparable speeds.
+I additionally implemented \brkas algortithm which proves to have better performance, as shown in Section \ref{sec:performance-analysis}, when working with sparse graphs if compared to the original Prim's solver.
 
 \bigskip
 \phantomsection
@@ -149,7 +149,7 @@ Since time complexity of Prim's solver using a heap is $\O(m \cdot \log{n})$, as
 \noindent
 \textbf{GPU IMPLEMENTATION:}
 \\
-As I alluded to in~\ref{sec:intro} I chose to follow~\cite{generic-he-boruvka} as my primary source. In the paper the researchers propose an higlhly efficient and parallel variant of \brka's solver for the GPU.
+As I alluded to in~\ref{sec:intro} I chose to follow~\cite{generic-he-boruvka} as my primary source. In the paper the researchers propose an higlhly efficient and parallel variant of \brkas solver for the GPU.
 
 Per~\cite{generic-he-boruvka} every part of the solution can be implemented as a distinct kernel
 deploying a thread per vertex (such an approach is referred to as \textit{topologic} in the
@@ -224,33 +224,26 @@ All of the benchmarks conducted are part of the tests provided for DIMACS\footno
 	\textit{New York}                & $\num{264346}$   & $\num{733846}$  \\\hline
 	\textit{San Francisco, bay area} & $\num{321270}$   & $\num{800172}$  \\\hline
 	\textit{Colorado}                & $\num{435666}$   & $\num{1057066}$ \\\hline
-	\textit{Florida}                 & $\num{ 070376}$  & $\num{2712798}$ \\\hline
-	\textit{California and Nevada}   & $\num{ 1890815}$ & $\num{4657742}$ \\\hline
+	\textit{Florida}                 & $\num{1070376}$  & $\num{2712798}$ \\\hline
+	\textit{California and Nevada}   & $\num{1890815}$ & $\num{4657742}$ \\\hline
 	\textit{Great Lakes}             & $\num{2758119}$  & $\num{6885658}$ \\\hline
 	\textit{Eastern USA}             & $\num{3598623}$  & $\num{8778114}$
 \end{longtable}
-Before discussing the results I want to point out that my GPU implementation gave very good results compared to the CPU code I wrote in the beginning, therefore in Figure~\ref{fig:results}, I decided to include both the GPU and CPU results listed in the original paper~\cite{generic-he-boruvka}.
-
-While I believe the CPU to be directly comparable with my results, since the architecture of the system used to test the code is closely related to the hardware that is running underneath Colab's environment, the plotted GPU results are more of a testament to the work that has been done prior.
+The testing results plotted in~\ref{fig:results} was obtained by running the same tests listed in~\ref{tbl:benchmarks} $5$ times for both GPU approaches, average and standard deviation for the timings were then computed and plotted. I decided to include also some performance measures taken from the original paper, specifically the GPU and CPU (single thread) average elapsed times for reference.
 \begin{figure}
 	\centering
 	\includegraphics[scale=0.4]{fig/benchmarks.png}
 	\caption{Performance metrics for the various platforms compared with the results in \cite{generic-he-boruvka}}
 	\label{fig:results}
 \end{figure}
-Computing the speedups for my GPU code, which is evidently less efficient than the one proposed in~\cite{generic-he-boruvka}, with respect to my CPU the results are in the neighbourhood of $\sim59\times$ to $\sim128\times$. Considering instead the results from the authors I get that the speedup is in between $\sim5\times$ and $\sim8\times$.
+Considering the various CPU implementations plotted in Figure~\ref{fig:results} speedup for GPU-e, with respect to \brka implementation, ranges between $\sim42\times$ and $\sim92\times$, while the speedup for GPU-u ranges between $\sim33\times$ and $\sim83\times$. Considering Prim's implementation the speedup for GPU-e ranges between $\sim66\times$ and $\sim150\times$, while the speedup for GPU-u ranges between $\sim52\times$ and $\sim136\times$.
 
-To further check the timings for my implementation I ran the same test (the East (E) benchmark) $5$ times, took the average and standard deviation of the elapsed times and plotted them in Figure~\ref{fig:avg-std-timings} where results for GPU-e and GPU-u are compared. Keeping the considerations limited to the results plotted in~\ref{fig:avg-std-timings} it's clear that the better solution is to stick with higher thread counts; that is because for smaller thread blocks the results are either: worse, in the case of the normal GPU-u approach, or have a higher instability for the GPU-e approach. Furthermore this consolidates the idea that the GPU-e approach results ever so slightly better than the original GPU-u one.
-\begin{figure}
-	\centering
-	\includegraphics[width=0.4\textwidth]{fig/timings.png}
-	\caption{Performance metrics for the two GPU implementations with respect to varying thread block size}
-	\label{fig:avg-std-timings}
-\end{figure}
-The \emph{occupancy} metric for a kernel $\mathcal{K}$ on a GPU is defined as the ratio of active warps on an SM to the maximum number of active warps supported by the SM~\cite{def-occupancy}. To test for it Nvidia provides the tool Nsight Compute (\texttt{ncu}). The results have been plotted in figure~\ref{fig:occupancy}, as we can see the general occupancy is inversely proportional to the number of iterations, that was to be expected because I followed a topologic approach, which means that the number of threads used by each kernel is going to be just as many as it's required to occupy every single thred with the computation for one vertex.
+Comparing my GPU implementations with the CPU approaches proposed in\cite{generic-he-boruvka}, based on OpenMP, we can see that both of my solutions consistently beat the single-threaded version (seen in Figure~\ref{fig:results}) with an estimated speedup between $\sim5\times$ and $\sim10\times$ while the speedup for the multithreaded implementation is closer to $1$ (which can only be found in the source material).
 
-Probably the most interesting takeaway that we can get from Figure~\ref{fig:occupancy} is the fact that the two kernels \texttt{GraphContractionCopy} (GCC) and \texttt{cumulatedDegreesUpdateCopy} (CDUC) show on average to have much better occupancy compared to the original \texttt{graphContraction} (GC) and \texttt{cumulatedDegreesUpdate} (CDU). Albeit the implementation of the "copy" kernels is not extraordinary, the approach is different, instead of having one thread per vertex in this second implementation I used one thread per edge, which in turn means that the GPU is going to be, on average, more occupied than it would otherwise be and it's less impacted by the contraction operation performed on the graph at every iteration of the loop.
+\medskip
+The \emph{occupancy} metric for a kernel $\mathcal{K}$ on a GPU is defined as the ratio of active warps on an SM to the maximum number of active warps supported by the SM~\cite{def-occupancy}. To test for it Nvidia provides the tool Nsight Compute (\texttt{ncu}). The results have been plotted in figure~\ref{fig:occupancy}, as we can see the general occupancy is inversely proportional to the number of iterations, that was to be expected because I followed a topologic approach, which means that the number of threads used by each kernel is going to be just as many as it's required to occupy every single thred with the computation for one vertex. Furthermore the number of threads per block is $1024$, thus the occupancy falls towards the end of the execution.
 
+In Figure~\ref{fig:occupancy} I highlighted the fact that the two kernels \texttt{GraphContractionCopy} (GCC) and \texttt{cumulatedDegreesUpdateCopy} (CDUC) show on average to have much better occupancy compared to the original \texttt{graphContraction} (GC) and \texttt{cumulatedDegreesUpdate} (CDU). Albeit the implementation of the "copy" kernels is not incredibly efficient, using one thread per edge translates to higher occupancy rating for the kernels despite the  which in turn means that the kernels will have a higher occupancy rating despite the decreasing graph size.
 \begin{figure}[!h]
 	\centering
 	\includegraphics[scale=0.5]{fig/occupancy.png}
@@ -266,13 +259,13 @@ Probably the most interesting takeaway that we can get from Figure~\ref{fig:occu
 \\
 \mstp will never stop to amaze due to how much can be done with the solution to a relatively simple problem. As I explained in~\ref{sec:intro} \mstp solvers have been used and are being used extensively to solve a wide gamma of larger problems, therefore there is no "being too fast".
 
-In the previous sections I explained how I got to the solution following somebody else's footsteps but much is still unknown, although the original paper was published under the title "A generic and highly efficient parallel variant of \brka's algorithm" it's immediately clear by taking a look at what kind of tests have been done on the solver (all similar to~\ref{tbl:benchmarks}) that the solution is not as "generic" as the authors would like it to be and it's highly likely it will perform as amazing as it does in the benchmarks shown in~\ref{fig:results} only if the graph is actually sparse (or the degree is limited).
+In the previous sections I explained how I got to the solution following somebody else's footsteps but, as always, more work can be done.
 
-As soon as the graph becomes more dense the complexity of computing simple kernels like the ones shown in~\ref{sec:gpu-implementation}, which contain a \texttt{for} loop to comply with the topologic approach, will explode~\footnote{The "critique" I just moved is merely based on speculation because I do not have access to the original source code}.
+Although the original paper was published under the title "A generic and highly efficient parallel variant of \brkas algorithm" it's immediately clear by taking a look at what kind of tests have been done on the solver (all similar to~\ref{tbl:benchmarks}) that the solution is not as "generic" as the authors would like it to be, and it's highly likely it will keep on performing on graphs with limited density.
 
-As shown in Section~\ref{sec:performance-analysis} the results obtained using an approach different from the topologic one yielded better results on average, therefore it's safe to assume that trying an implementation entirely based on this different approach and takling the kernels that suffer the most might improve performance furhter. To this point, the authors of the source material mentioned very briefly, the possibility of implementing a segmented scan approach for the \texttt{findCheapest} operation, I think that this approach, with some additional work, can be extended to most of the kernels and it could lead to a more efficient version of GPU-e.
+As shown in Section~\ref{sec:performance-analysis} the results obtained by trying a different approach yielded mixed results on average, therefore it's not entirely clear whether an approach entirely based on visiting edges (which would work through segmented scans and similar) instead of vertices would be beneficial, and lead to better results, or detrimental, because of the heavy use of atomic operations and synchronization.
 
-It would be interesting, in this field, to keep on analyzing further techniques, considering more generic graphs. This can be acheived by trying to solve the problem following the same approach I used for this implementation, therefore using repeated contractions by rank; or by shifting paradigm~\cite{mst-bipartite}.
+It would be interesting, to keep experimenting and finding different ways of computing \mst in parallel like~\cite{mst-bipartite}.
 
 \clearpage
 
