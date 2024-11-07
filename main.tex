@@ -141,7 +141,7 @@ Since the implementation worked but was in fact extremely slow compared to finer
 decided to scrap it in favour of a more efficient implementation of Prim's algorithm based on
 the use of a simple heap to sort the edges needed to build the \mst.
 
-I additionally implemented \brkas algortithm which proves to have better performance, as shown in Section \ref{sec:performance-analysis}, when working with sparse graphs if compared to the original Prim's solver.
+I additionally implemented \brkas algortithm which proves to have better performance, as shown in Section \ref{sec:performance-analysis}, when working with sparse graphs, if compared to the original Prim's solver, which has an edge on denser graphs.
 
 \bigskip
 \phantomsection
@@ -181,14 +181,7 @@ Most of the kernels proposed in the solution can be written to use one single th
 	\input{fig/tikz/first_iteration.tikz}
 	\caption{Example of the first iteration}\label{tikz:first-iteration}
 \end{figure}
-My implementation consists of two approaches, one that follows the idea explained in the source material, referred to as GPU-u, and the other being more "experimental", referred to as GPU-e, deriving from some experiments I made.
-
-GPU-e differs essentially in three ways:
-\begin{enumerate}
-	\item It uses a different technique to compute the scan which is based on offloading a part of the computation to the CPU.
-	\item It uses a different technique to compute the cumulated degrees array. Essentially it uses one thread per edge and then identifies the owner of the edge through a binary search inside the old cumDegrees array, which is sorted by definition. Once the origin is known the computation proceeds as normal.
-	\item It uses a different technique to compute the graph contraction. I derived a technique similar to the prior.
-\end{enumerate}
+In the following section I will be comparing two very similar approaches, GPU-u, which follows closely the implementation guidelines of the original paper, and GPU-e, which is more experimental.GPU-e differs essentially in how it computes the new cumulated degrees vector and the graph contraction; instead of using a topological approach for both kernels I use one thread per edge and then proceed to do a binary search for each edge to find the source of the edge. The result is that I am moving the cost of doing a \texttt{for} loop on a single processor to visiting the neighbourhood with an extreme degree of parallelism.
 
 \bigskip
 \phantomsection
@@ -242,8 +235,6 @@ Comparing my GPU implementations with the CPU approaches proposed in\cite{generi
 
 \medskip
 The \emph{occupancy} metric for a kernel $\mathcal{K}$ on a GPU is defined as the ratio of active warps on an SM to the maximum number of active warps supported by the SM~\cite{def-occupancy}. To test for it Nvidia provides the tool Nsight Compute (\texttt{ncu}). The results have been plotted in figure~\ref{fig:occupancy}, as we can see the general occupancy is inversely proportional to the number of iterations, that was to be expected because I followed a topologic approach, which means that the number of threads used by each kernel is going to be just as many as it's required to occupy every single thred with the computation for one vertex. Furthermore the number of threads per block is $1024$, thus the occupancy falls towards the end of the execution.
-
-In Figure~\ref{fig:occupancy} I highlighted the fact that the two kernels \texttt{GraphContractionCopy} (GCC) and \texttt{cumulatedDegreesUpdateCopy} (CDUC) show on average to have much better occupancy compared to the original \texttt{graphContraction} (GC) and \texttt{cumulatedDegreesUpdate} (CDU). Albeit the implementation of the "copy" kernels is not incredibly efficient, using one thread per edge translates to higher occupancy rating for the kernels despite the  which in turn means that the kernels will have a higher occupancy rating despite the decreasing graph size.
 \begin{figure}[!h]
 	\centering
 	\includegraphics[scale=0.5]{fig/occupancy.png}
@@ -265,7 +256,7 @@ Although the original paper was published under the title "A generic and highly 
 
 As shown in Section~\ref{sec:performance-analysis} the results obtained by trying a different approach yielded mixed results on average, therefore it's not entirely clear whether an approach entirely based on visiting edges (which would work through segmented scans and similar) instead of vertices would be beneficial, and lead to better results, or detrimental, because of the heavy use of atomic operations and synchronization.
 
-It would be interesting, to keep experimenting and finding different ways of computing \mst in parallel like~\cite{mst-bipartite}.
+It would be interesting, to keep experimenting and finding different ways of computing \mst in parallel like~\cite{mst-bipartite} targetting especially less sparse trees.
 
 \clearpage
 
