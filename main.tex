@@ -21,7 +21,8 @@
 \noindent
 \textbf{ABSTRACT:}
 \\
-In this report I will explain the development process behind my solution to the well known \mstp. In the following sections I will be covering: the problem on a theoretical level~\ref{sec:intro}, the data structure implemented to keep the graph in memory~\ref{sec:graph-structure}, the CPU~\ref{sec:cpu-implementation} and GPU~\ref{sec:gpu-implementation} implementations, the results in terms of speedup and occupancy~\ref{sec:performance-analysis} and finally some conclusions regarding the project and the problem as a whole~\ref{sec:final-thoughts}.
+In this report I will explain my solution for \mstp. In the following sections I will be covering:
+The theory behind the problem alongside some solutions~\ref{sec:intro}, the data structure implemented to keep the graph in memory~\ref{sec:graph-structure}, the CPU~\ref{sec:cpu-implementation} and GPU~\ref{sec:gpu-implementation} implementations, the results in terms of speedup and occupancy~\ref{sec:performance-analysis} and finally some conclusions regarding the project and the problem as a whole~\ref{sec:final-thoughts}.
 
 \bigskip
 
@@ -30,7 +31,11 @@ In this report I will explain the development process behind my solution to the 
 \noindent
 \textbf{INTRODUCTION TO THE PROBLEM:}
 \\
-The Minimum Spanning Tree Problem (\mstp for short) is a problem that has been studied for years and to this day finds many real world applications, to name a few:
+Given an undirected, weighted and connected graph $\mathcal{G}(V, E)$, computing it's Minimum
+Spanning Tree (\mst for short) means finding a minimum weight tree connecting every vertex $v \in V$ in
+$\mathcal{G}$.
+
+The Minimum Spanning Tree Problem (\mstp for short) has been studied for years and to this day finds many real world applications, to name a few:
 \begin{enumerate}
 	\item It's possible to find different \mst-based techniques used to do image segmentation~\cite{maze-generation}~\cite{mst-segmentation-heuristic}.
 	\item Finding an \mst allows us to solve the Clustering problem, all we need to do is to compute an \mst and then drop its $k - 1$ most expensive edges~\cite{mst-applications}.
@@ -39,24 +44,26 @@ The Minimum Spanning Tree Problem (\mstp for short) is a problem that has been s
 
 Many different solutions have been found for the problem in the years, the more basic implementations were Prim's~\cite{prim-algorithm} and Kruskal's~\cite{kruskal-algorithm}.
 
-Prim's algorithm is the simplest solver for \mstp, given a graph $G= (V, E)$, let us suppose that the size of the graph $|V|$ is $n$ and the number of edges $|E|$ is $m$, then, based on the implementation, the computational complexity varies:
+In the case of Prim's algorithm, given a graph $\mathcal{G} = (V, E)$, let us suppose that the size of the graph $|V|$ is $n$ and the number of edges $|E|$ is $m$, then, based on the implementation, the computational complexity varies:
 \begin{itemize}
 	\item Na\"ive implementation: $\O(n^2)$
 	\item Binary heap and adjacency list: $\O(m\log{n})$
 	\item Fibonacci heap and adjacency list: $\O(m + n\log{n})$
 \end{itemize}
-In my implementation I have implemented both the Na\"ive version and the one using a binary heap, the first one was later scrapped because it resulted useless for benchmarking pourposes, more on this in section~\ref{sec:cpu-implementation}.
+As will be shown in section~\ref{sec:cpu-implementation} I implemented two different sequential
+solvers, the first one using b-heap based Prim's algorithm, and the second one using \brkas algorithm.
 
-Kruskal's algorithm is the alternative to Prim's algorithm and it works in time $\O(m\log{m})$ if implemented using classical data structures.
+Kruskal's algorithm is the alternative to Prim's algorithm and it works in time $\O(m\log{m})$ if
+implemented using classical data structures~\cite{clrs}.
 
-\brkas algorithm is a solver for the \mstp based on forests, a more verbose version of the algorithm shown in~\cite{boruvka-pseudocode} can be found in~\ref{algo:boruvka-pseudocode}
+\brkas algorithm is a solver for \mstp based on forests, a more verbose version of the algorithm shown in~\cite{boruvka-pseudocode} can be found in~\ref{algo:boruvka-pseudocode}
 \begin{algorithm}
 	\caption{\brkas algorithm}
 	\label{algo:boruvka-pseudocode}
 	\begin{algorithmic}[1]
-		\REQUIRE An undirected, connected and weighted graph $G$, an empty set of edges $T$
+		\REQUIRE An undirected, connected and weighted graph $\mathcal{G}$, an empty set of edges $T$
 		\ENSURE An \mst$T$ built on graph $G$
-		\WHILE{vertices in $G$ connected by $T$ are disjoint}
+		\WHILE{vertices in $\mathcal{G}$ connected by $T$ are disjoint}
 		\STATE start with an empty set of edges $E$
 		\FOR{every connected component $\mathcal{C}$}
 		\STATE start with an empty set of edges $S$
@@ -73,7 +80,7 @@ Kruskal's algorithm is the alternative to Prim's algorithm and it works in time 
 
 Let us suppose that the size of the graph $|V|$ is $n$ and the number of edges $E$ is $m$, then the computational complexity of the pseudocode shown in~\ref{algo:boruvka-pseudocode} is $\O(m\log{n})$. This algorithm has been later reused in combination with other techniques to compute a solution for the \mstp very efficiently~\cite{boruvka-ackermann}~\cite{karger-klein-tarjan}.
 
-While parallel solutions based on Prim's or Kruskal's algorithm exists like~\cite{prim-parallel}~\cite{filter-kruskal} \brkas solver gained more traction thanks to its inherent parallelizability. Regardless of the implementation the core of the parallel variant can be identified in the following four steps as identified in~\cite{boruvka-steps}:
+While parallel solutions based on Prim's or Kruskal's algorithm exists like~\cite{prim-parallel}~\cite{filter-kruskal} \brkas solver gained more traction thanks to its inherent parallelizability. Regardless of the implementation the core of the parallel variant can be identified in the following four steps~\cite{boruvka-steps}:
 \begin{enumerate}
 	\item\label{item:first-step} (\textit{choose lightest}) for every vertex the lightest edge is chosen in parallel.
 	\item\label{item:second-step} (\textit{find root}) for every vertex we find the root of the tree to which it belongs\footnote{It's important to keep in mind that vertices are actually supervertices.}.
