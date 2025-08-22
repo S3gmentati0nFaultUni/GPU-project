@@ -1,0 +1,13 @@
+CompileFlags:
+  Add: [
+    --cuda-gpu-arch=sm_75,
+    --std=c++20,
+    --cuda-path=/usr/local/cuda-12.6/,
+    -I/usr/local/cuda-12.6/include/,
+    -xcuda
+  ]
+  Remove:
+  [
+      '-rdc=true',
+      '-gencode',
+  ]
