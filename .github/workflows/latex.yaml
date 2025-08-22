@@ -1,0 +1,39 @@
+name: Deploy PDF
+
+env:
+  MAIN_FILE: "main"
+  RBODY: "Latest version of the latex presentation"
+
+on:
+  push:
+    branches: [ main ]
+
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Build
+        uses: xu-cheng/latex-action@v2
+        with:
+          root_file: "${{ env.MAIN_FILE }}.tex"
+      - name: Get short commit hash
+        run: |
+          echo "SHORT_HASH=$(git rev-parse --short HEAD)" >> "$GITHUB_ENV"
+          echo "$SHORT_HASH"
+      - name: Create Tag
+        id: create_tag
+        run: |
+          rtag="v$SHORT_HASH"
+          git tag $rtag
+          git push origin $rtag
+      - name: Release
+        uses: softprops/action-gh-release@v2
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          tag_name: "v${{ env.SHORT_HASH }}"
+          files: "${{ env.MAIN_FILE }}.pdf"
+          body: ${{ env.RBODY }}
