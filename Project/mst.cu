@@ -603,7 +603,7 @@ void computeMST (std::string fpath, std::string tname) {
             if (TESTING) {
                 string path(LOGPATH + string("GPU") + "_" + tname);
 
-                ofstream logfile(path, ios_base::app);
+                ofstream logfile(path, ios_base::out);
 
                 if (logfile.is_open()){
                     cout << "Writing to file " << path << endl;
