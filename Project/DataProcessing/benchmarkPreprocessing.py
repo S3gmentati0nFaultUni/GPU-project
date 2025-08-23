@@ -7,7 +7,7 @@ def preprocessBenchmark() :
                          'usa']
     i = 0
     for file in os.listdir(benchmarkFolder):
-        src = open(f'{benchmarkFolder}{file}', 'r')
+        src = open(f'{benchmarkFolder}raws/{file}', 'r')
         try:
             dst = open(f'{benchmarkFolder}{newBenchmarkNames[i]}.txt', 'x')
             dst.close()
