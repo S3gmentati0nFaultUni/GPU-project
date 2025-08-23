@@ -303,5 +303,6 @@ TSWLatexianTemp*
 # Scarto tutte le modifiche al file di inizializzazione
 file.tex
 
-# Scarto la cartella zip di test
-tests.zip
+# Scarto nella cartella del progetto alcune robe extra
+/Project/benches/
+/Project/build/
