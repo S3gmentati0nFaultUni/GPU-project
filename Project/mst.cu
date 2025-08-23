@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <fstream>
 #include <string>
+#include <filesystem>
 
 // Header file C
 #include <time.h>
@@ -370,7 +371,7 @@ __global__ void svIdentification (GraphStruct *str, uint *d_colors, uint *d_cand
 
 
 
-int main () {
+void computeMST (std::string fpath, std::string tname) {
     // Generation of a random graph
     std::random_device rd;
     std::default_random_engine eng(FIXED_SEED);
@@ -381,7 +382,7 @@ int main () {
 
     // Generation of the graph
     if (TESTING) {
-        string path(TEST);
+        string path(fpath);
         printf("Generating graph from file\n");
         graphPointer = rgraph(path, true);
     }
@@ -391,7 +392,7 @@ int main () {
 
         if (!graphPointer->isConnected()) {
             cout << "The graph is not connected" << endl;
-            return -1;
+            return;
         }
     }
 
@@ -600,7 +601,7 @@ int main () {
             delete graphPointer;
 
             if (TESTING) {
-                string path(LOGPATH + string("gpuU"));
+                string path(LOGPATH + string("GPU") + "_" + tname);
 
                 ofstream logfile(path, ios_base::app);
 
@@ -614,7 +615,7 @@ int main () {
                 }
             }
 
-            return 0;
+            return;
         }
 
 
@@ -693,7 +694,7 @@ int main () {
             for (uint i = 0; i < size - 1; i++) {
                 if (cFlag[i] != flag[i]) {
                     cout << "I due array sono diversi in posizione " << i << "   " << cFlag[i] << "   " << flag[i] << endl;
-                    return -1;
+                    return;
                 }
             }
 
@@ -792,7 +793,7 @@ int main () {
                 if (cCumDegs[i] != cumDegs[i]) {
                     cout << "I due array sono diversi in posizione " << i << endl;
                     cout << cCumDegs[i] << "   " << cumDegs[i];
-                    return -1;
+                    return;
                 }
             }
         }
@@ -898,5 +899,24 @@ int main () {
         delete[] newWeights;
     }
 
-    return 0;
+    return;
 }
+
+
+int main() {
+    const std::vector<std::string> test = { "nw", "cal", "lks", "bay", "ne", "west", "col", "east", "ctr", "fla", "ny" };
+    const std::filesystem::path sandbox{TEST};
+    std::size_t i {0};
+    for (auto const& dir_entry : std::filesystem::directory_iterator{sandbox}) {
+        if (dir_entry.path().extension() != ".txt") {
+            continue;
+        }
+        cout << dir_entry.path() << endl;
+        computeMST(
+            dir_entry.path().string(), 
+            test[i]
+        );
+        ++i;
+    }
+}
+
