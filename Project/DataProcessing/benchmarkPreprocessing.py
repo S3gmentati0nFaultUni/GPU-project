@@ -3,16 +3,17 @@ import re
 
 def preprocessBenchmark() :
     benchmarkFolder = 'benches/'
-    newBenchmarkNames = ['ny', 'bay', 'col', 'fla', 'nw', 'ne', 'cal', 'lks', 'east', 'west', 'ctr',
-                         'usa']
+    newBenchmarkNames = [ 'usa', 'ny', 'fla', 'col', 'west', 'bay', 'ne', 'ctr', 'nw', 'lks', 'cal',
+                         'east' ]
     i = 0
-    for file in os.listdir(benchmarkFolder):
+    for file in os.listdir(f'{benchmarkFolder}raws/'):
+        print(f'Preprocessing file {file} writing to {benchmarkFolder}{newBenchmarkNames[i]}.txt')
         src = open(f'{benchmarkFolder}raws/{file}', 'r')
         try:
             dst = open(f'{benchmarkFolder}{newBenchmarkNames[i]}.txt', 'x')
             dst.close()
         except:
-            print('The file has already been created')
+            pass
         dst = open(f'{benchmarkFolder}{newBenchmarkNames[i]}.txt', 'w')
 
         # Consume 4 useless lines

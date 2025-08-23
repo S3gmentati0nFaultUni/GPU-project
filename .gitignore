@@ -306,3 +306,4 @@ file.tex
 # Scarto nella cartella del progetto alcune robe extra
 /Project/benches/
 /Project/build/
+/Project/runtime/
