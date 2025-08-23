@@ -7,10 +7,10 @@
 #define BLOCK_SIZE 1024
 #define PROBABILITY .0025
 #define TESTING 1
-#define TEST "benches/ny.txt"
+#define TEST "benches/"
 #define TEST_SIZE 3
 #define FIXED_SEED 51286
-#define LOGPATH "../runtime/result_"
+#define LOGPATH "runtime/result_"
 #define NO_VALUE -42
 #define TIME_ARRAY_SIZE 20
 
