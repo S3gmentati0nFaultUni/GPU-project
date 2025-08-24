@@ -19,4 +19,10 @@ if (CMAKE_BUILD_TYPE STREQUAL "Debug")
 endif()
 
 # Add test executable
-add_executable(mst mst.cu DataStructure/Graph.cpp DataStructure/Graph_d.cu DataStructure/ReadGraph.cu)
+add_executable(
+	mst
+	DataStructure/Graph.cu
+	DataStructure/ReadGraph.cu
+	mst.cu
+	MST_hk.cu
+)
