@@ -6,6 +6,8 @@
 #include <fstream>
 #include <string>
 #include <filesystem>
+#include <thrust/scan.h>
+#include <thrust/execution_policy.h>
 
 // Header file C
 #include <time.h>
@@ -21,7 +23,7 @@
 using namespace std;
 
 
-void computeMST (std::string fpath, std::string tname) {
+void computeMST (std::string fpath, std::string tname, bool useThrust) {
     // Generation of a random graph
     std::random_device rd;
     std::default_random_engine eng(FIXED_SEED);
@@ -251,7 +253,14 @@ void computeMST (std::string fpath, std::string tname) {
             delete graphPointer;
 
             if (TESTING) {
-                string path(LOGPATH + string("GPU") + "_" + tname);
+                string mainFileName;
+                if (!useThrust) {
+                    mainFileName = "GPU";
+                }
+                else {
+                    mainFileName = "GPUthst";
+                }
+                string path(LOGPATH + mainFileName + "_" + tname);
 
                 ofstream logfile(path, ios_base::out);
 
@@ -298,41 +307,60 @@ void computeMST (std::string fpath, std::string tname) {
         uint smemSize = 2 * blockDim;
         uint smem = smemSize * sizeof(uint);
         uint numSmemBlock = (size + smemSize - 1) / smemSize;
-
-        // Setup the auxiliary array
         uint *aux, *d_aux;
-        aux = new uint[numSmemBlock];
-        CHECK(cudaMalloc((void **) &d_aux, (numSmemBlock) * sizeof(uint)));
-        CHECK(cudaMemset(d_aux, 0, (numSmemBlock) * sizeof(uint)));
+
 
         // Setup of the d_flag array
         CHECK(cudaMalloc((void**)&d_flag, (size) * sizeof(uint)));
         CHECK(cudaMemset(d_flag, 0, (size) * sizeof(uint)));
 
-        printf("prescan procedure on the flag array of size: %d ...\n", size);
-        cudaEventRecord(start);
-        prescan <<<  numSmemBlock, blockDim, smem >>> (d_flag, d_ogFlag, d_aux, size, smemSize);
-        CHECK(cudaDeviceSynchronize());
-        CHECK(cudaEventRecord(stop));
-        CHECK(cudaEventSynchronize(stop));
-        CHECK(cudaGetLastError());
-        cudaEventElapsedTime(&milliseconds, start, stop);
-        spliTime = milliseconds / 1000.0;
-        printf("The first prescan procedure took:   %.5f seconds\n", spliTime);
+        if (useThrust) {
+            printf("Thrust scan procedure on the flag array of size: %d ...\n", size);
+            cudaEventRecord(start);
+            thrust::exclusive_scan(thrust::device, d_ogFlag, d_ogFlag + size, d_flag);
+            CHECK(cudaDeviceSynchronize());
+            CHECK(cudaEventRecord(stop));
+            CHECK(cudaEventSynchronize(stop));
+            CHECK(cudaGetLastError());
+            cudaEventElapsedTime(&milliseconds, start, stop);
+            spliTime = milliseconds / 1000.0;
+            printf("Thrust scan took:   %.5f seconds\n", spliTime);
+        }
+        else {
+            // Setup the auxiliary array
+            aux = new uint[numSmemBlock];
+            CHECK(cudaMalloc((void **) &d_aux, (numSmemBlock) * sizeof(uint)));
+            CHECK(cudaMemset(d_aux, 0, (numSmemBlock) * sizeof(uint)));
 
-        totalTime += spliTime;
+            printf("prescan procedure on the flag array of size: %d ...\n", size);
+            cudaEventRecord(start);
+            prescan <<<  numSmemBlock, blockDim, smem >>> (d_flag, d_ogFlag, d_aux, size, smemSize);
+            CHECK(cudaDeviceSynchronize());
+            CHECK(cudaEventRecord(stop));
+            CHECK(cudaEventSynchronize(stop));
+            CHECK(cudaGetLastError());
+            cudaEventElapsedTime(&milliseconds, start, stop);
+            spliTime = milliseconds / 1000.0;
+            printf("The first prescan procedure took:   %.5f seconds\n", spliTime);
 
-        // Put everything together
-        printf("final summation procedure...\n");
-        cudaEventRecord(start);
-        cfinal_sum <<< gridDim, blockDim >>> (d_flag, d_aux, size);
-        CHECK(cudaDeviceSynchronize());
-        CHECK(cudaEventRecord(stop));
-        CHECK(cudaEventSynchronize(stop));
-        CHECK(cudaGetLastError());
-        cudaEventElapsedTime(&milliseconds, start, stop);
-        spliTime = milliseconds / 1000.0;
-        printf("The final summation procedure took:   %.5f seconds\n\n", spliTime);
+            totalTime += spliTime;
+
+            // Put everything together
+            printf("final summation procedure...\n");
+            cudaEventRecord(start);
+            cfinal_sum <<< gridDim, blockDim >>> (d_flag, d_aux, size);
+            CHECK(cudaDeviceSynchronize());
+            CHECK(cudaEventRecord(stop));
+            CHECK(cudaEventSynchronize(stop));
+            CHECK(cudaGetLastError());
+            cudaEventElapsedTime(&milliseconds, start, stop);
+            spliTime = milliseconds / 1000.0;
+            printf("The final summation procedure took:   %.5f seconds\n\n", spliTime);
+            
+            // Spring Cleaning
+            delete[] (aux);
+            CHECK(cudaFree(d_aux));
+        }
 
         totalTime += spliTime;
 
@@ -351,9 +379,8 @@ void computeMST (std::string fpath, std::string tname) {
             delete[] cFlag;
         }
         cout << "The contracted graph will contain " << flag[size - 1] << " supervertices\n\n" << endl;
-        // Spring Cleaning
-        delete[] (aux);
-        CHECK(cudaFree(d_aux));
+
+        // Sprint cleaning
         CHECK(cudaFree(d_ogFlag));
 
 
@@ -388,11 +415,6 @@ void computeMST (std::string fpath, std::string tname) {
 
 
 
-        // Perform another prefix sum on the cumDegrees array
-        // Setup aux
-        aux = new uint[numSmemBlock];
-        CHECK(cudaMalloc((void **) &d_aux, (numSmemBlock) * sizeof(uint)));
-        CHECK(cudaMemset(d_aux, 0, (numSmemBlock) * sizeof(uint)));
 
         uint *cCumDegs;
 
@@ -408,31 +430,53 @@ void computeMST (std::string fpath, std::string tname) {
         CHECK(cudaMalloc((void **) &d_ogCumDegs, cumDegSize * sizeof(uint)));
         CHECK(cudaMemcpy(d_ogCumDegs, cumDegs, (cumDegSize) * sizeof(uint), cudaMemcpyHostToDevice));
 
-        printf("prescan procedure on the cumDegs array of size: %d ...\n", size);
-        cudaEventRecord(start);
-        prescan <<<  numSmemBlock, blockDim, smem >>> (d_cumDegs, d_ogCumDegs, d_aux, cumDegSize, smemSize);
-        CHECK(cudaDeviceSynchronize());
-        CHECK(cudaEventRecord(stop));
-        CHECK(cudaEventSynchronize(stop));
-        CHECK(cudaGetLastError());
-        cudaEventElapsedTime(&milliseconds, start, stop);
-        spliTime = milliseconds / 1000.0;
-        printf("The first prescan procedure took:   %.5f seconds\n", spliTime);
+        if (useThrust) {
+            printf("Thrust scan procedure on the cumDegs array of size: %d ...\n", cumDegSize);
+            cudaEventRecord(start);
+            thrust::exclusive_scan(thrust::device, d_ogCumDegs, d_ogCumDegs + cumDegSize, d_cumDegs);
+            CHECK(cudaDeviceSynchronize());
+            CHECK(cudaEventRecord(stop));
+            CHECK(cudaEventSynchronize(stop));
+            CHECK(cudaGetLastError());
+            cudaEventElapsedTime(&milliseconds, start, stop);
+            spliTime = milliseconds / 1000.0;
+            printf("Thrust scan took:   %.5f seconds\n", spliTime);
+        }
+        else {
 
-        totalTime += spliTime;
+            // Perform another prefix sum on the cumDegrees array
+            // Setup aux
+            aux = new uint[numSmemBlock];
+            CHECK(cudaMalloc((void **) &d_aux, (numSmemBlock) * sizeof(uint)));
+            CHECK(cudaMemset(d_aux, 0, (numSmemBlock) * sizeof(uint)));
 
-        // Put everything together
-        printf("final summation procedure...\n");
-        cudaEventRecord(start);
-        cfinal_sum <<< gridDim, blockDim >>> (d_cumDegs, d_aux, cumDegSize);
-        CHECK(cudaDeviceSynchronize());
-        CHECK(cudaEventRecord(stop));
-        CHECK(cudaEventSynchronize(stop));
-        CHECK(cudaGetLastError());
-        cudaEventElapsedTime(&milliseconds, start, stop);
-        spliTime = milliseconds / 1000.0;
-        printf("The final summation procedure took:   %.5f seconds\n\n", spliTime);
+            printf("prescan procedure on the cumDegs array of size: %d ...\n", size);
+            cudaEventRecord(start);
+            prescan <<<  numSmemBlock, blockDim, smem >>> (d_cumDegs, d_ogCumDegs, d_aux, cumDegSize, smemSize);
+            CHECK(cudaDeviceSynchronize());
+            CHECK(cudaEventRecord(stop));
+            CHECK(cudaEventSynchronize(stop));
+            CHECK(cudaGetLastError());
+            cudaEventElapsedTime(&milliseconds, start, stop);
+            spliTime = milliseconds / 1000.0;
+            printf("The first prescan procedure took:   %.5f seconds\n", spliTime);
 
+
+            // Put everything together
+            printf("final summation procedure...\n");
+            cudaEventRecord(start);
+            cfinal_sum <<< gridDim, blockDim >>> (d_cumDegs, d_aux, cumDegSize);
+            CHECK(cudaDeviceSynchronize());
+            CHECK(cudaEventRecord(stop));
+            CHECK(cudaEventSynchronize(stop));
+            CHECK(cudaGetLastError());
+            cudaEventElapsedTime(&milliseconds, start, stop);
+            spliTime = milliseconds / 1000.0;
+            printf("The final summation procedure took:   %.5f seconds\n\n", spliTime);
+            
+            free(aux);
+            CHECK(cudaFree(d_aux));
+        }
         totalTime += spliTime;
 
         CHECK(cudaMemcpy(cumDegs, d_cumDegs, cumDegSize * sizeof(uint), cudaMemcpyDeviceToHost));
@@ -451,8 +495,6 @@ void computeMST (std::string fpath, std::string tname) {
         cout << "The old graph structure contained " << str->edgeSize << " edges\n\n" << endl;
 
         // Spring cleaning
-        free(aux);
-        CHECK(cudaFree(d_aux));
         CHECK(cudaFree(d_ogCumDegs));
 
 
@@ -554,7 +596,7 @@ void computeMST (std::string fpath, std::string tname) {
 
 
 int main() {
-    const std::vector<std::string> test = { "nw", "cal", "lks", "bay", "ne", "west", "col", "east", "ctr", "fla", "ny" };
+    const std::vector<std::string> test = { "nw", "cal", "lks", "bay", "ne", "west", "usa", "col", "east", "ctr", "fla", "ny" };
     const std::filesystem::path sandbox{TEST};
     std::size_t i {0};
     for (auto const& dir_entry : std::filesystem::directory_iterator{sandbox}) {
@@ -564,7 +606,8 @@ int main() {
         cout << dir_entry.path() << endl;
         computeMST(
             dir_entry.path().string(), 
-            test[i]
+            test[i],
+            true
         );
         ++i;
     }
