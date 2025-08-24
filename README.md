@@ -7,6 +7,6 @@ The code was developed in the "free for use" development platform from Google, C
 The whole notebook can be imported in the environment and run, should already contain everything it needs to work, as far as tests are concerned two different approaches can be followed:
 
 - A graph generator, mind that if the graph is not sparse the performance of the algorithm will fail to meet expectations
-- The graphs proposed in the 9th DIMACS challenge (<a href="https://diag.uniroma1.it/challenge9/">Benchmarks</a>) due to the weird format of the data they should be cleaned with something like a python script or similar because the reading script is expecting a file very similar to a csv.
+- The graphs proposed in the 9th DIMACS challenge (<a href="https://www.diag.uniroma1.it/challenge9/download.shtml">Benchmarks</a>) due to the weird format of the data they should be cleaned with something like a python script or similar because the reading script is expecting a file very similar to a csv.
 
 The conclusions for the project can be found in the <a href="https://github.com/S3gmentati0nFaultUni/GPU-project/releases/download/final-release/report.pdf">report</a>
