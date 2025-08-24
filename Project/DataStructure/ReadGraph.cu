@@ -3,8 +3,8 @@
 #include <iostream>
 #include <sstream>
 
-#include "Graph_d.h"
-#include "Graph.h"
+#include "../MST_hk.cuh"
+#include "Graph.cuh"
 #include "../Common/common.h"
 #include "../Common/sharedMacros.h"
 #include "ReadGraph.h"

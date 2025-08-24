@@ -5,7 +5,7 @@
 #include <iostream>
 #include <vector>
 
-#include "Graph.h"
+#include "Graph.cuh"
 #include "../Common/common.h"
 #include "../Common/sharedMacros.h"
 
