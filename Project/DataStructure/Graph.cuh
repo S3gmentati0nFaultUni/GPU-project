@@ -1,5 +1,5 @@
-#ifndef GRAPH_H
-#define GRAPH_H
+#ifndef GRAPH_CUH
+#define GRAPH_CUH
 
 #include <random>
 #include <string>
@@ -140,7 +140,6 @@ public:
 	void graphConstruction(uint nnn, uint nne, node *nNeighbours, uint *neWeights, uint *nCumDegs);
 	void randGraph(float, bool, int, std::default_random_engine &); // generate an Erdos random graph
 	void print(bool);
-	void print_d(GraphStruct *, bool);
 	GraphStruct *getStruct() { return str; }
 	void memsetGPU(uint, std::string); // use UVA memory on CPU/GPU
 	void memsetGPU(uint, uint);		   // use UVA memory on CPU/GPU

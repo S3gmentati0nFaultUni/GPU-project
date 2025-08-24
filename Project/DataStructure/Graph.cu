@@ -3,7 +3,9 @@
 #include <iostream>
 #include <memory>
 #include <limits.h>
-#include "Graph.h"
+#include <cstdio>
+#include "Graph.cuh"
+#include "../Common/common.h"
 
 using namespace std;
 
@@ -178,4 +180,32 @@ void Graph::print(bool verbose)
 		}
 		cout << "\n";
 	}
+}
+
+void Graph::deallocGPU() {
+  CHECK(cudaFree(str->neighs));
+  CHECK(cudaFree(str->weights));
+  CHECK(cudaFree(str->cumDegs));
+  CHECK(cudaFree(str));
+}
+
+/**
+ * Set the CUDA Unified Memory for nodes and edges
+ * @param memType node or edge memory type
+ */
+void Graph::memsetGPU(uint nn, string memType) {
+  if (!memType.compare("nodes")) {
+    CHECK(cudaMallocManaged(&str, sizeof(GraphStruct)));
+    CHECK(cudaMallocManaged(&(str->cumDegs), (nn + 1) * sizeof(node)));
+  } else if (!memType.compare("edges")) {
+    CHECK(cudaMallocManaged(&(str->neighs), str->edgeSize * sizeof(node)));
+    CHECK(cudaMallocManaged(&(str->weights), str->edgeSize * sizeof(int)));
+  }
+}
+
+void Graph::memsetGPU(uint nn, uint ne) {
+  CHECK(cudaMallocManaged(&str, sizeof(GraphStruct)));
+  CHECK(cudaMallocManaged(&(str->cumDegs), (nn + 1) * sizeof(node)));
+  CHECK(cudaMallocManaged(&(str->neighs), ne * sizeof(node)));
+  CHECK(cudaMallocManaged(&(str->weights), ne * sizeof(int)));
 }
