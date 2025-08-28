@@ -54,11 +54,11 @@ def plotter():
 
 
     # Set labels, title, and legend
-    ax.set_xlabel("Graph", fontsize=12)
-    ax.set_ylabel("Execution Time (s)", fontsize=12)
+    ax.set_xlabel("Graph", fontsize=20)
+    ax.set_ylabel("Execution Time (s)", fontsize=20)
     ax.set_xticks(x + bar_width)  # Center x-ticks
-    ax.set_xticklabels(newBenchmarkNames, rotation=45)
-    ax.legend(loc="upper left", fontsize=10, title="Legend", title_fontsize='13')
+    ax.set_xticklabels(newBenchmarkNames, rotation=45, fontsize=20)
+    ax.legend(loc="upper left", fontsize=20, title="Legend", title_fontsize='13')
 
     # Show grid and plot
     ax.grid(True, which="both", linestyle="--", linewidth=0.5)
