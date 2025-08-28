@@ -300,10 +300,8 @@ TSWLatexianTemp*
 # Uncomment the next line to have this generated file ignored.
 #*Notes.bib
 
-# Scarto tutte le modifiche al file di inizializzazione
-file.tex
-
 # Scarto nella cartella del progetto alcune robe extra
 /Project/benches/
 /Project/build/
 /Project/runtime/
+/Project/venv/
