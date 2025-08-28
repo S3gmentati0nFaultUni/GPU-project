@@ -27,26 +27,12 @@ void computeMST (std::string fpath, std::string tname, bool useThrust) {
     // Generation of a random graph
     std::random_device rd;
     std::default_random_engine eng(FIXED_SEED);
-    uint maxWeight = MAX_WEIGHT;
-    float prob = .5;
-    bool GPUEnabled = 1;
     Graph *graphPointer;
 
     // Generation of the graph
-    if (TESTING) {
-        string path(fpath);
-        printf("Generating graph from file\n");
-        graphPointer = rgraph(path, true);
-    }
-    else {
-        graphPointer = new Graph(SIZE, GPUEnabled);
-        graphPointer->randGraph(prob, true, maxWeight, eng);
-
-        if (!graphPointer->isConnected()) {
-            cout << "The graph is not connected" << endl;
-            return;
-        }
-    }
+    string path(fpath);
+    printf("Generating graph from file\n");
+    graphPointer = rgraph(path, true);
 
 
     uint iterations = 0;
