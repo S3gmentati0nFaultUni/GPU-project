@@ -2,12 +2,13 @@
 #include <string>
 #include <iostream>
 #include <sstream>
+#include <exception>
 
 #include "../MST_hk.cuh"
-#include "Graph.cuh"
 #include "../Common/common.h"
 #include "../Common/sharedMacros.h"
 #include "ReadGraph.h"
+#include "Graph.cuh"
 
 using namespace std;
 
@@ -80,7 +81,7 @@ Graph *rgraph(string path, bool GPUenabled) {
     uint edgeSize = str->edgeSize;
     printf("%d\t%d\n", nodeSize, edgeSize);
     vector<uint> *edges = new vector<uint>[edgeSize];
-	  vector<int> *weights = new vector<int>[edgeSize];
+	vector<int> *weights = new vector<int>[edgeSize];
 
     while (getline(inFile, line)) {
         readEdge(line, edges, weights, str);
@@ -103,11 +104,6 @@ Graph *rgraph(string path, bool GPUenabled) {
     delete[] weights;
     weights = NULL;
 
-/*
-    graph->print(true);
-    print_d <<<1, 1>>> (str, 1);
-    CHECK(cudaDeviceSynchronize());
-*/
     return graph;
 }
 
@@ -133,6 +129,7 @@ CPUGraph *rgraphCPU(string path) {
     ss >> element;
     edgeSize = stoi(element);
     CPUGraph *graph = new CPUGraph(nodeSize, edgeSize);
+    std::cout << "Graph size: " << graph->nodeSize << ", " << graph->edgeSize << std::endl;
 
     uint i = 0;
     while (getline(inFile, line)) {
@@ -142,7 +139,11 @@ CPUGraph *rgraphCPU(string path) {
 
     printf("Closing the file and freeing memory\n");
 
-    inFile.close();
+    try {
+        inFile.close();
+    } catch (const std::exception& ex) {
+        std::cout << "There was a problem while closing the file" << std::endl << ex.what() << std::endl;
+    }
 
     return graph;
 }

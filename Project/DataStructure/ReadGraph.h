@@ -40,12 +40,12 @@ struct CPUGraph {
     CPUGraph(int nodeSize, int edgeSize) {
         this->nodeSize = nodeSize;
         this->edgeSize = edgeSize;
-        this->edges = vector<Edge>(edgeSize - 1);
+        this->edges = vector<Edge>(edgeSize);
     }
 
     void print() {
         cout << this->nodeSize << "   " << this->edgeSize << endl;
-        for (int i = 0; i < this->edgeSize - 1; i++) {
+        for (int i = 0; i < this->edgeSize; i++) {
             this->edges[i].print();
         }
     }

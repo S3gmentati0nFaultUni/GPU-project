@@ -26,3 +26,10 @@ add_executable(
 	mst.cu
 	MST_hk.cu
 )
+
+add_executable(
+	mstCPU
+	DataStructure/ReadGraph.cu
+	DataStructure/Graph.cu
+	mstCPU.cu
+)
