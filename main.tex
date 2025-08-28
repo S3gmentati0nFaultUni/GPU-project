@@ -118,7 +118,7 @@ The graph returned in the last step is a single supervertex and the \mst is actu
 Before discussing the solution I want to briefly introduce the data structure. Normally, when working with graphs, the two data structures that come to mind are:
 \begin{itemize}
 	\item The \emph{adjacency matrix}, which represents any connection between two vertices, $i,
-		j$ in the graph as a $1$ or a $0$ in a matrix in position $(i, j)$\footnote{For simplicity's sale I consider an unweighted graph}. Let's suppose that the $|V|$ is $n$, then the amount of space occupied by a matrix in memory is $\O(n^2)$ while the cost of accessing element $(i, j)$, independently from the values of $i$ and $j$, is just $\O(1)$.
+		      j$ in the graph as a $1$ or a $0$ in a matrix in position $(i, j)$\footnote{For simplicity's sale I consider an unweighted graph}. Let's suppose that the $|V|$ is $n$, then the amount of space occupied by a matrix in memory is $\O(n^2)$ while the cost of accessing element $(i, j)$, independently from the values of $i$ and $j$, is just $\O(1)$.
 	\item The \emph{adjacency list}, which stores a reference to every neighbour of every vertex. Usually memorized as an array of lists, therefore if $j$ is neighbour for vertex $i$ a reference to $j$ will be placed in the list of neighbours of $i$. Supposing that $|E|$ is $m$, then the cost of keeping such a structure in memory is $O(m + n)$ and the cost of accessing any neighbour for a generic vertex $i$ is going to be $\O(n)$, because in the worst case we could be accessing a graph in which all of the vertices are linked to $i$.
 \end{itemize}
 The approach I followed for the implementation of the algorithm is, to quote the authors
@@ -168,45 +168,45 @@ literature), to better understand every step I took the example graph shown in~\
 Following Algorithm~\ref{algo:boruvka-parallel} one iteration of the outer loop consists of:
 \begin{enumerate}
 	\item\label{item:choose-lightest} (\textit{choosing the lightest}), as shown in~\ref{tikz:find-cheapest}, this operation picks the lightest outgoing edge in every vertex neighbourhood in parallel. The result is going to be a single reference to the outgoing edge which will be stored in the \texttt{candidates} array.
-	
-		Weight ties are broken by picking the neighbour with the smallest vertex-id. Considering
-		vertex $4$ shown in~\ref{tikz:find-cheapest} the cheapest edge has weight $1$ and
-		links $4$ to $3$, therefore in position $4$ inside of the new array we will be
-		putting a reference to $3$\footnote{In the actual implementation the offset from the
+
+	Weight ties are broken by picking the neighbour with the smallest vertex-id. Considering
+	vertex $4$ shown in~\ref{tikz:find-cheapest} the cheapest edge has weight $1$ and
+	links $4$ to $3$, therefore in position $4$ inside of the new array we will be
+	putting a reference to $3$\footnote{In the actual implementation the offset from the
 		beginning of the vertex's neighbourhood is saved}.
 	\item\label{item:mirror-removal} (\textit{removing loops}), as shown in~\ref{tikz:loop-removal}, this operation is meant to remove cycles from the graph. Whenever a cycle between vertices $i$ and $j$ is identified only the copy of the edge associated to the vertex with the highest vertex-id is kept, the other is set to the default value of \texttt{UINT\_MAX}.
 
-		Considering vertex $4$ in shown in~\ref{tikz:loop-removal} we see that the candidate
-		edge for vertex $3$ leads to $4$, thus a loop has been found, as a result the
-		candidate for $3$ is replaced with the default value indicated as $\mathcal{U}$.
+	Considering vertex $4$ in shown in~\ref{tikz:loop-removal} we see that the candidate
+	edge for vertex $3$ leads to $4$, thus a loop has been found, as a result the
+	candidate for $3$ is replaced with the default value indicated as $\mathcal{U}$.
 	\item\label{item:coloration} (\textit{Initializing and propagating colors}), as shown in~\ref{tikz:coloration}, this operation is meant to identify connected components inside the graph and can be implemented recursively using a kernel as recursion head and a series of \texttt{\_\_device\_\_} function calls to propagate the colors.
-	
+
 	The resulting \texttt{colors} array will contain the vertex-id of vertices with undefined candidate value and, for all other vertices, the color value will be computed recursively by using the color of the neighbour pointed by the \texttt{candidates} array.
 
-		If we consider vertex $4$ shown in~\ref{tikz:coloration}, its candidate value is
-		pointing to $3$, therefore $4$ will belong to the same component $3$ belongs to,
-		since the candidate value for $3$ is $\mathcal{U}$ then it's going to be the root of the
-		connected component and its color will be set to its vertex id.
+	If we consider vertex $4$ shown in~\ref{tikz:coloration}, its candidate value is
+	pointing to $3$, therefore $4$ will belong to the same component $3$ belongs to,
+	since the candidate value for $3$ is $\mathcal{U}$ then it's going to be the root of the
+	connected component and its color will be set to its vertex id.
 	\item\label{item:vertex-rename} (\textit{Renaming vertices}), as shown in~\ref{tikz:sv-rename}, to rename the vertices a new array is created (in my implementation is \texttt{flag}) that contains a $0$ in every position where the color of the vertex is different from the vertex id and a $1$ otherwise. Afterwards an exclusive scan procedure is comptued on \texttt{flag} to compute the new vertex-ids.
 
-		Since during the previous step the algorithm recursively looks for the root of the
-		component we can easily merge the two steps together to have a reduction of the
-		kernel launch overhead.
+	Since during the previous step the algorithm recursively looks for the root of the
+	component we can easily merge the two steps together to have a reduction of the
+	kernel launch overhead.
 	\item\label{item:graph-contraction} (\textit{Counting, assign and insert new edges}), as shown in the last part of Figure~\ref{tikz:first-iteration} this bigger operation has to be split into three different steps:
 	\begin{itemize}
 		\item\label{item:count-edges} (\textit{Count edges}), as shown in~\ref{tikz:edge-count}, a simple kernel will be checking every edge in a vertex's neighbourhood, comparing the color of the source with the color of the destination (effectively comparing the connected components they belong to).
-		
+
 		If they belong to different connected components the result will be added to the \texttt{newCumDegs} array that is being constructed.
-		
-			If we consider the neighbourhood for vertex $4$, the first edge leads to
-			$2$, which is colored red; since $4$ is colored red as well we do not count
-			it as an outgoing edge for the new supervertex (the edge stays within the
-			component). $4$ also has an edge leading to vertex $5$ which is colored in
-			teal, since its color is not red the edge is reaching another component,
-			therefore it is counted as one of the outgoing edges for supervertex $1$.
+
+		If we consider the neighbourhood for vertex $4$, the first edge leads to
+		$2$, which is colored red; since $4$ is colored red as well we do not count
+		it as an outgoing edge for the new supervertex (the edge stays within the
+		component). $4$ also has an edge leading to vertex $5$ which is colored in
+		teal, since its color is not red the edge is reaching another component,
+		therefore it is counted as one of the outgoing edges for supervertex $1$.
 		\item\label{item:scan-ncd} (\textit{Cumulated degrees computation}), as shown in~\ref{tikz:scan-ncdegs}, the resulting \texttt{newCumDegs}, which contains the outdegrees for every connected component, undergoes a round of scan to finalize the computation of the cumulated degrees vector for the contracted graph.
 		\item\label{item:graph-regen} (\textit{Graph contraction}), as shown in~\ref{tikz:graph-contraction}, this step generates the new neighbour and weight array using a logic that is very similar to the one used for the calculation of the new number of outgoing edges.
-		
+
 		While edges intra-component are removed, duplicated ones are kept, because it's easier than handling their removal.
 	\end{itemize}
 \end{enumerate}
@@ -250,41 +250,51 @@ Development and performance analysis have been carried out using the Google Cola
 	\end{longtable}
 \end{center}
 All of the benchmarks conducted are part of the tests provided for DIMACS\footnote{DIscrete
-MAthematics \& theoretical Computer Science center
-(\url{https://www.diag.uniroma1.it/challenge9/download.shtml})} 9th challenge, the benchmark
+	MAthematics \& theoretical Computer Science center
+	(\url{https://www.diag.uniroma1.it/challenge9/download.shtml})} 9th challenge, the benchmark
 instances are listed in table~\ref{tbl:benchmarks} and the results for the original paper have been
 plotted alongside mine, for reference, in~\ref{fig:results}.
-\begin{longtable}{|c|c|c|}
+\begin{longtable}{|c|c|c|c|}
 	\caption{Benchmark dimensions}\label{tbl:benchmarks}
-	\\\hline\textbf{Benchmark} & \textbf{Node size} & \textbf{Edge size} \\\hline\hline
+	\\\hline\textbf{Benchmark} & \textbf{Node set size} & \textbf{Edge set size} & \textbf{MST weight} \\\hline\hline
 	\endfirsthead\hline\endlastfoot
 
-	\textit{New York}                & $\num{264346}$   & $\num{733846}$  \\\hline
-	\textit{San Francisco, bay area} & $\num{321270}$   & $\num{800172}$  \\\hline
-	\textit{Colorado}                & $\num{435666}$   & $\num{1057066}$ \\\hline
-	\textit{Florida}                 & $\num{1070376}$  & $\num{2712798}$ \\\hline
-	\textit{California and Nevada}   & $\num{1890815}$ & $\num{4657742}$ \\\hline
-	\textit{Great Lakes}             & $\num{2758119}$  & $\num{6885658}$ \\\hline
-	\textit{Eastern USA}             & $\num{3598623}$  & $\num{8778114}$
+	\textit{New York City}           & $\num{264346}$   & $\num{73346}$    & $\num{261159288}$   \\\hline
+	\textit{San Francisco, bay area} & $\num{321270}$   & $\num{800172}$   & $\num{435798417}$   \\\hline
+	\textit{Colorado}                & $\num{435666}$   & $\num{1057066}$  & $\num{1323900090}$  \\\hline
+	\textit{Florida}                 & $\num{1070376}$  & $\num{2712798}$  & $\num{1806814846}$  \\\hline
+	\textit{Northwest USA}           & $\num{1207945}$  & $\num{2840208}$  & $\num{3522586810}$  \\\hline
+	\textit{Northeast USA}           & $\num{1524453}$  & $\num{3897636}$  & $\num{2131122758}$  \\\hline
+	\textit{California and Nevada}   & $\num{1890815}$  & $\num{4657742}$  & $\num{4270584202}$  \\\hline
+	\textit{Great Lakes}             & $\num{2758119}$  & $\num{6885658}$  & $\num{6124343246}$  \\\hline
+	\textit{Eastern USA}             & $\num{3598623}$  & $\num{8778114}$  & $\num{6492121041}$  \\\hline
+	\textit{Western USA}             & $\num{6262104}$  & $\num{15248146}$ & $\num{19804938071}$ \\\hline
+	\textit{Central USA}             & $\num{14081816}$ & $\num{34292496}$ & $\num{33201942960}$ \\\hline
+	\textit{Full USA}                & $\num{23947347}$ & $\num{58333344}$ & $\num{59505686128}$ \\\hline
 \end{longtable}
-The testing results plotted in~\ref{fig:results} were obtained by running every benchmark $5$ times for both GPU approaches, average and standard deviation for the timings were then computed and plotted.
+The testing results were obtained after one run of the algorithm for every implementation on each of
+the graphs used as benchmarks.
 \begin{figure}
 	\centering
-	\includegraphics[scale=0.4]{fig/benchmarks.png}
-	\caption{Performance metrics for the various platforms compared with the results in \cite{generic-he-boruvka}}
+	\includegraphics[scale=0.3]{fig/benchmarks.png}
+	\caption{Comparison of the performance metrics for the various implementations}
 	\label{fig:results}
 \end{figure}
-Considering the various CPU implementations plotted in Figure~\ref{fig:results} speedup for GPU-e, with respect to \brka implementation, ranges between $\sim42\times$ and $\sim92\times$, while the speedup for GPU-u ranges between $\sim33\times$ and $\sim83\times$. Considering Prim's implementation the speedup for GPU-e ranges between $\sim66\times$ and $\sim150\times$, while the speedup for GPU-u ranges between $\sim52\times$ and $\sim136\times$.
-
-Comparing my GPU implementations with the CPU approaches proposed in\cite{generic-he-boruvka}, based
-on OpenMP, we can see that both of my solutions consistently beat the single-threaded version (seen
-in Figure~\ref{fig:results}) with an estimated speedup between $\sim5\times$ and $\sim10\times$
-while the speedup for the multithreaded implementation is closer to $1$ (which can only be found in
-the source material)\footnote{All comparisons the original paper have to be taken with a grain of
-salt, the algorithm was not rerun on my machine, I decided to include the results in the analysis
-just for reference but they weren't used as actual benchmark for my solution.}.
+If we consider the simple \brka implementation created to run on the CPU we can see that the
+speedups on the two GPU variants are ranging between roughly $\sim50\times$ and $\sim90\times$. It's
+interesting to note that the two GPU implementations are essentially identicaly, apart from the use
+of the \textttt{exclusive_scan} procedure implemented in the CUDA thrust library. Interestingly
+enough we always see one of the two approaches slightly prevail over the other and, while I would
+have expected the thrust implementation to be the better one overall, we can see that it's not
+necessarily the case, especially when we are looking at cases like central, western and full USA.
 
 \medskip
+
+The following plots and considerations regarding occupancy are part of legacy code, therefore should
+be taken with a grain of salt.
+
+\medskip
+
 The \emph{occupancy} metric for a kernel $\mathcal{K}$ on a GPU is defined as the ratio of active
 warps on an SM to the maximum number of active warps supported by the SM~\cite{def-occupancy}. To
 test for it, Nvidia provides the tool Nsight Compute (\texttt{ncu}). The results have been plotted
