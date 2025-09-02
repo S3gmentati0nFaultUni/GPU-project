@@ -302,7 +302,7 @@ TSWLatexianTemp*
 
 # Scarto nella cartella del progetto alcune robe extra
 /Project/benches/
-/Project/build/
+/Project/builds/
 /Project/runtime/
 /Project/venv/
 /Project/requirements.txt
