@@ -169,46 +169,46 @@ Following Algorithm~\ref{algo:boruvka-parallel} one iteration of the outer loop 
 \begin{enumerate}
 	\item\label{item:choose-lightest} (\textit{choosing the lightest}), as shown in~\ref{tikz:find-cheapest}, this operation picks the lightest outgoing edge in every vertex neighbourhood in parallel. The result is going to be a single reference to the outgoing edge which will be stored in the \texttt{candidates} array.
 
-	Weight ties are broken by picking the neighbour with the smallest vertex-id. Considering
-	vertex $4$ shown in~\ref{tikz:find-cheapest} the cheapest edge has weight $1$ and
-	links $4$ to $3$, therefore in position $4$ inside of the new array we will be
-	putting a reference to $3$\footnote{In the actual implementation the offset from the
-		beginning of the vertex's neighbourhood is saved}.
+	      Weight ties are broken by picking the neighbour with the smallest vertex-id. Considering
+	      vertex $4$ shown in~\ref{tikz:find-cheapest} the cheapest edge has weight $1$ and
+	      links $4$ to $3$, therefore in position $4$ inside of the new array we will be
+	      putting a reference to $3$\footnote{In the actual implementation the offset from the
+		      beginning of the vertex's neighbourhood is saved}.
 	\item\label{item:mirror-removal} (\textit{removing loops}), as shown in~\ref{tikz:loop-removal}, this operation is meant to remove cycles from the graph. Whenever a cycle between vertices $i$ and $j$ is identified only the copy of the edge associated to the vertex with the highest vertex-id is kept, the other is set to the default value of \texttt{UINT\_MAX}.
 
-	Considering vertex $4$ in shown in~\ref{tikz:loop-removal} we see that the candidate
-	edge for vertex $3$ leads to $4$, thus a loop has been found, as a result the
-	candidate for $3$ is replaced with the default value indicated as $\mathcal{U}$.
+	      Considering vertex $4$ in shown in~\ref{tikz:loop-removal} we see that the candidate
+	      edge for vertex $3$ leads to $4$, thus a loop has been found, as a result the
+	      candidate for $3$ is replaced with the default value indicated as $\mathcal{U}$.
 	\item\label{item:coloration} (\textit{Initializing and propagating colors}), as shown in~\ref{tikz:coloration}, this operation is meant to identify connected components inside the graph and can be implemented recursively using a kernel as recursion head and a series of \texttt{\_\_device\_\_} function calls to propagate the colors.
 
-	The resulting \texttt{colors} array will contain the vertex-id of vertices with undefined candidate value and, for all other vertices, the color value will be computed recursively by using the color of the neighbour pointed by the \texttt{candidates} array.
+	      The resulting \texttt{colors} array will contain the vertex-id of vertices with undefined candidate value and, for all other vertices, the color value will be computed recursively by using the color of the neighbour pointed by the \texttt{candidates} array.
 
-	If we consider vertex $4$ shown in~\ref{tikz:coloration}, its candidate value is
-	pointing to $3$, therefore $4$ will belong to the same component $3$ belongs to,
-	since the candidate value for $3$ is $\mathcal{U}$ then it's going to be the root of the
-	connected component and its color will be set to its vertex id.
+	      If we consider vertex $4$ shown in~\ref{tikz:coloration}, its candidate value is
+	      pointing to $3$, therefore $4$ will belong to the same component $3$ belongs to,
+	      since the candidate value for $3$ is $\mathcal{U}$ then it's going to be the root of the
+	      connected component and its color will be set to its vertex id.
 	\item\label{item:vertex-rename} (\textit{Renaming vertices}), as shown in~\ref{tikz:sv-rename}, to rename the vertices a new array is created (in my implementation is \texttt{flag}) that contains a $0$ in every position where the color of the vertex is different from the vertex id and a $1$ otherwise. Afterwards an exclusive scan procedure is comptued on \texttt{flag} to compute the new vertex-ids.
 
-	Since during the previous step the algorithm recursively looks for the root of the
-	component we can easily merge the two steps together to have a reduction of the
-	kernel launch overhead.
+	      Since during the previous step the algorithm recursively looks for the root of the
+	      component we can easily merge the two steps together to have a reduction of the
+	      kernel launch overhead.
 	\item\label{item:graph-contraction} (\textit{Counting, assign and insert new edges}), as shown in the last part of Figure~\ref{tikz:first-iteration} this bigger operation has to be split into three different steps:
-	\begin{itemize}
-		\item\label{item:count-edges} (\textit{Count edges}), as shown in~\ref{tikz:edge-count}, a simple kernel will be checking every edge in a vertex's neighbourhood, comparing the color of the source with the color of the destination (effectively comparing the connected components they belong to).
+	      \begin{itemize}
+		      \item\label{item:count-edges} (\textit{Count edges}), as shown in~\ref{tikz:edge-count}, a simple kernel will be checking every edge in a vertex's neighbourhood, comparing the color of the source with the color of the destination (effectively comparing the connected components they belong to).
 
-		If they belong to different connected components the result will be added to the \texttt{newCumDegs} array that is being constructed.
+		            If they belong to different connected components the result will be added to the \texttt{newCumDegs} array that is being constructed.
 
-		If we consider the neighbourhood for vertex $4$, the first edge leads to
-		$2$, which is colored red; since $4$ is colored red as well we do not count
-		it as an outgoing edge for the new supervertex (the edge stays within the
-		component). $4$ also has an edge leading to vertex $5$ which is colored in
-		teal, since its color is not red the edge is reaching another component,
-		therefore it is counted as one of the outgoing edges for supervertex $1$.
-		\item\label{item:scan-ncd} (\textit{Cumulated degrees computation}), as shown in~\ref{tikz:scan-ncdegs}, the resulting \texttt{newCumDegs}, which contains the outdegrees for every connected component, undergoes a round of scan to finalize the computation of the cumulated degrees vector for the contracted graph.
-		\item\label{item:graph-regen} (\textit{Graph contraction}), as shown in~\ref{tikz:graph-contraction}, this step generates the new neighbour and weight array using a logic that is very similar to the one used for the calculation of the new number of outgoing edges.
+		            If we consider the neighbourhood for vertex $4$, the first edge leads to
+		            $2$, which is colored red; since $4$ is colored red as well we do not count
+		            it as an outgoing edge for the new supervertex (the edge stays within the
+		            component). $4$ also has an edge leading to vertex $5$ which is colored in
+		            teal, since its color is not red the edge is reaching another component,
+		            therefore it is counted as one of the outgoing edges for supervertex $1$.
+		      \item\label{item:scan-ncd} (\textit{Cumulated degrees computation}), as shown in~\ref{tikz:scan-ncdegs}, the resulting \texttt{newCumDegs}, which contains the outdegrees for every connected component, undergoes a round of scan to finalize the computation of the cumulated degrees vector for the contracted graph.
+		      \item\label{item:graph-regen} (\textit{Graph contraction}), as shown in~\ref{tikz:graph-contraction}, this step generates the new neighbour and weight array using a logic that is very similar to the one used for the calculation of the new number of outgoing edges.
 
-		While edges intra-component are removed, duplicated ones are kept, because it's easier than handling their removal.
-	\end{itemize}
+		            While edges intra-component are removed, duplicated ones are kept, because it's easier than handling their removal.
+	      \end{itemize}
 \end{enumerate}
 Most of the kernels proposed in the solution can be written to use one single thread per vertex and a \texttt{for} loop to cycle the neighbourhood, since there is no dependency between the various vertices~\cite{generic-he-boruvka}, the steps can be computed in parallel for a major efficiency boost. Synchronization is only ever needed inside the \texttt{scan} functions, to make sure that all of the threads have a consistent view of shared memory, atomic operations are required in some instances to offer a solution to race conditions.
 \begin{figure}
@@ -230,23 +230,27 @@ section~\ref{sec:final-thoughts}.
 \noindent
 \textbf{PERFORMANCE ANALYSIS:}
 \\
-Development and performance analysis have been carried out using the Google Colab hosting service\footnote{\url{https://colab.research.google.com/}}, the machine specs, gathered through tools like \texttt{/proc/cpuinfo} and \texttt{/proc/meminfo}, alongside \texttt{nvidia-smi} and the official documentation~\cite{t4-info}~\cite{t4-product-brief}, are listed in~\ref{tbl:system}
+Development and performance analysis of the original project have been carried out using the Google
+Colab hosting service\footnote{\url{https://colab.research.google.com/}}. The extension has been
+written and tested on my personal machine, which specs can be found in~\ref{tbl:system}, have been
+gathered through the official documentation and thrid party
+websites~\cite{rtx-2060-powerup, rtx-2060-evga, r7-3700x}.
 \begin{center}
 	\begin{longtable}{|c|c|c|}
 		\caption{System information}\label{tbl:system}
 		\\\hline\textbf{} & \textbf{CPU} & \textbf{GPU} \\\hline\hline
 		\endfirsthead\hline\endlastfoot
 
-		\textbf{Manufacturer}               & Intel                                                                                                               & NVIDIA                                                              \\\hline
+		\textbf{Manufacturer}               & AMD                        & EVGA                                                                \\\hline
 
-		\textbf{Model}                      & Intel Xeon (V\footnote{V stands for virtualized, can't find the actual CPU model that is being mounted in servers}) & T4                                                                  \\\hline
-		\textbf{Launch Date}                & N.A.                                                                                                                & Oct 2018                                                            \\\hline
-		\textbf{\#Cores}                    & $2$ vcores                                                                                                          & $\num{2560}$ C\footnote{CUDA cores}, $320$ T\footnote{Tensor cores} \\\hline
-		\textbf{Clock Speed (GHz)}          & $\num{2.20}$ GHz                                                                                                    & Base: $0.585$ MHz, Boost: $1.59$ GHz                                \\\hline
-		\textbf{Memory / Cache}             & L3 Cache: $56$ MB                                                                                                   & VRAM: $16$ GB GDDR6                                                 \\\hline
-		\textbf{Memory Bandwidth}           & N.A.                                                                                                                & 300 GB/s                                                            \\\hline
-		\textbf{TDP (Thermal Design Power)} & N.A.                                                                                                                & $70$ W                                                              \\\hline
-		\textbf{Architecture}               & N.A.                                                                                                                & Turing
+		\textbf{Model}                      & Ryzen 7 3700X              & RTX 2060 KO                                                         \\\hline
+		\textbf{Launch Date}                & Jul 2019                   & Jan 2020                                                            \\\hline
+		\textbf{\#Cores}                    & $8$ cores 16 threads       & $\num{1920}$ C\footnote{CUDA cores}, $240$ T\footnote{Tensor cores} \\\hline
+		\textbf{Clock Speed (GHz)}          & m: $3.6$ GHz, M: $4.4$ GHz & m: $1365$ MHz, M: $1680$ MHz                                        \\\hline
+		\textbf{Memory / Cache}             & \makecell{L1: 64 KB                                                                              \\ L2: 512 KB \\ L3: 32 MB\footnote{All measurements are per-core}} & VRAM: $16$ GB GDDR6                                                 \\\hline
+		\textbf{Memory Bandwidth}           & N.A.                       & 336 GB/s                                                            \\\hline
+		\textbf{TDP (Thermal Design Power)} & $65$ W                     & $160$ W                                                             \\\hline
+		\textbf{Architecture}               & Matisse ($7$ nm)           & Turing
 	\end{longtable}
 \end{center}
 All of the benchmarks conducted are part of the tests provided for DIMACS\footnote{DIscrete
@@ -283,7 +287,7 @@ the graphs used as benchmarks.
 If we consider the simple \brka implementation created to run on the CPU we can see that the
 speedups on the two GPU variants are ranging between roughly $\sim50\times$ and $\sim90\times$. It's
 interesting to note that the two GPU implementations are essentially identicaly, apart from the use
-of the \textttt{exclusive_scan} procedure implemented in the CUDA thrust library. Interestingly
+of the \texttt{exclusive\_scan} procedure implemented in the CUDA thrust library. Interestingly
 enough we always see one of the two approaches slightly prevail over the other and, while I would
 have expected the thrust implementation to be the better one overall, we can see that it's not
 necessarily the case, especially when we are looking at cases like central, western and full USA.
