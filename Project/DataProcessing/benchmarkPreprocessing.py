@@ -3,10 +3,10 @@ import re
 
 def preprocessBenchmark() :
     benchmarkFolder = 'benches/'
-    newBenchmarkNames = [ 'usa', 'ny', 'fla', 'col', 'west', 'bay', 'ne', 'ctr', 'nw', 'lks', 'cal',
-                         'east' ]
+    newBenchmarkNames = [ 'bay', 'cal', 'col', 'ctr', 'east', 'fla', 'lks', 'ne', 'nw', 'ny', 'usa',
+                     'west' ]
     i = 0
-    for file in os.listdir(f'{benchmarkFolder}raws/'):
+    for file in sorted(os.listdir(f'{benchmarkFolder}raws/')):
         print(f'Preprocessing file {file} writing to {benchmarkFolder}{newBenchmarkNames[i]}.txt')
         src = open(f'{benchmarkFolder}raws/{file}', 'r')
         try:
